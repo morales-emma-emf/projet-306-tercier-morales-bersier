@@ -56,11 +56,7 @@ Explique les avantages que le projet apportera une fois terminé :
 ---
 
 ## **5. Analyse SWOT**
-Présente une analyse des :  
-- Forces  
-- Faiblesses  
-- Opportunités  
-- Menaces  
+![alt text](./images/swot.png)
 
 ---
 
