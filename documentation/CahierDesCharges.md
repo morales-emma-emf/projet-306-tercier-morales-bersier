@@ -125,8 +125,7 @@ Ce besoin est lié à une optimisation organisationnelle et à un meilleur suivi
 
 ### Hors périmètre :
 - Gestion complète de la paie  
-- Intégration avec des systèmes externes  
-- Systèmes biométriques  
+
 
 ---
 
