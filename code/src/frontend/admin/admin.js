@@ -72,9 +72,11 @@ async function loadUsers() {
 
 // Render Users Table
 function renderUsersTable(users) {
-    usersTableBody.innerHTML = users.map(user => `
+    usersTableBody.innerHTML = users.map(user => {
+        const safeId = parseInt(user.id, 10);
+        return `
         <tr>
-            <td>${user.id}</td>
+            <td>${safeId}</td>
             <td>${escapeHtml(user.name)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td><span class="pin-display">${escapeHtml(user.pin)}</span></td>
@@ -85,16 +87,36 @@ function renderUsersTable(users) {
             </td>
             <td>
                 <div class="action-btns">
-                    <button class="btn btn-secondary btn-small" onclick="editUser(${user.id})">
+                    <button class="btn btn-secondary btn-small btn-edit" data-user-id="${safeId}">
                         ✏️ Modifier
                     </button>
-                    <button class="btn btn-danger btn-small" onclick="deleteUser(${user.id})">
+                    <button class="btn btn-danger btn-small btn-delete" data-user-id="${safeId}">
                         🗑️ Supprimer
                     </button>
                 </div>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
+
+    // Add event listeners using event delegation
+    usersTableBody.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const userId = parseInt(btn.dataset.userId, 10);
+            if (!isNaN(userId)) {
+                editUser(userId);
+            }
+        });
+    });
+
+    usersTableBody.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const userId = parseInt(btn.dataset.userId, 10);
+            if (!isNaN(userId)) {
+                deleteUser(userId);
+            }
+        });
+    });
 }
 
 // Update User Filter Dropdown

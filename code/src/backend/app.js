@@ -44,6 +44,12 @@ app.get('/api/users/:id', (req, res) => {
     res.json(user);
 });
 
+// Helper function to validate email format
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
 // Create a new user
 app.post('/api/users', (req, res) => {
     const { name, email, pin } = req.body;
@@ -52,8 +58,23 @@ app.post('/api/users', (req, res) => {
         return res.status(400).json({ error: 'Name, email, and PIN are required' });
     }
     
+    // Validate email format
+    if (!isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
     if (pin.length !== 4 || !/^\d+$/.test(pin)) {
         return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+    }
+    
+    // Check for duplicate email
+    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        return res.status(400).json({ error: 'Email already exists' });
+    }
+    
+    // Check for duplicate PIN
+    if (users.some(u => u.pin === pin)) {
+        return res.status(400).json({ error: 'PIN already in use' });
     }
     
     const newUser = {
@@ -79,8 +100,23 @@ app.put('/api/users/:id', (req, res) => {
     
     const { name, email, pin, active } = req.body;
     
+    // Validate email format if provided
+    if (email && !isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
     if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
         return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+    }
+    
+    // Check for duplicate email (excluding current user)
+    if (email && users.some(u => u.id !== userId && u.email.toLowerCase() === email.toLowerCase())) {
+        return res.status(400).json({ error: 'Email already exists' });
+    }
+    
+    // Check for duplicate PIN (excluding current user)
+    if (pin && users.some(u => u.id !== userId && u.pin === pin)) {
+        return res.status(400).json({ error: 'PIN already in use' });
     }
     
     users[userIndex] = {
