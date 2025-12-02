@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Admin - Gestion des Présences</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Interface Admin</h1>
+            <p>Gestion des utilisateurs et des présences</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="users">👥 Utilisateurs</button>
+            <button class="tab-btn" data-tab="attendance">📊 Présences</button>
+        </nav>
+
+        <!-- Users Tab -->
+        <section id="users" class="tab-content active">
+            <div class="section-header">
+                <h2>Liste des Utilisateurs</h2>
+                <button id="addUserBtn" class="btn btn-primary">➕ Ajouter un utilisateur</button>
+            </div>
+            
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Email</th>
+                        <th>PIN</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Users will be loaded here -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Attendance Tab -->
+        <section id="attendance" class="tab-content">
+            <div class="section-header">
+                <h2>Historique des Présences</h2>
+                <div class="filter-group">
+                    <label for="userFilter">Filtrer par utilisateur:</label>
+                    <select id="userFilter">
+                        <option value="">Tous les utilisateurs</option>
+                    </select>
+                </div>
+            </div>
+            
+            <table id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Utilisateur</th>
+                        <th>Type</th>
+                        <th>Date et Heure</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Attendance records will be loaded here -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Add/Edit User Modal -->
+        <div id="userModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Ajouter un utilisateur</h3>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+                <form id="userForm">
+                    <input type="hidden" id="userId">
+                    <div class="form-group">
+                        <label for="userName">Nom:</label>
+                        <input type="text" id="userName" required placeholder="Entrez le nom complet">
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail">Email:</label>
+                        <input type="email" id="userEmail" required placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="userPin">PIN (4 chiffres):</label>
+                        <input type="text" id="userPin" required pattern="\d{4}" maxlength="4" placeholder="0000">
+                    </div>
+                    <div class="form-group">
+                        <label for="userActive">Statut:</label>
+                        <select id="userActive">
+                            <option value="true">Actif</option>
+                            <option value="false">Inactif</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h3>Confirmer la suppression</h3>
+                    <button class="close-btn" onclick="closeDeleteModal()">&times;</button>
+                </div>
+                <p>Êtes-vous sûr de vouloir supprimer cet utilisateur ?</p>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Annuler</button>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Supprimer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
