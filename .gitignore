@@ -1,0 +1,10 @@
+# Node modules
+node_modules/
+
+# Ignore node_modules in subprojects
+code/**/node_modules/
+
+# Optional: lockfiles and env
+# package-lock.json
+# yarn.lock
+# .env
