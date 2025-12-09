@@ -3,7 +3,7 @@ node_modules/
 
 # Ignore node_modules in subprojects
 code/**/node_modules/
-
+code/**/.next/
 # Optional: lockfiles and env
 # package-lock.json
 # yarn.lock
