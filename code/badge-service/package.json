@@ -8,13 +8,14 @@
     "dev": "ts-node src/index.ts"
   },
   "dependencies": {
-    "phidget22": "^3.19.0",
+    "dotenv": "^16.4.1",
+    "express": "^5.2.1",
     "node-fetch": "^3.3.2",
-    "dotenv": "^16.4.1"
+    "phidget22": "^3.19.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
+    "@types/node": "^20.11.16",
     "ts-node": "^10.9.2",
-    "@types/node": "^20.11.16"
+    "typescript": "^5.3.3"
   }
 }
