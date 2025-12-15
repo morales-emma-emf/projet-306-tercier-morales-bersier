@@ -1,5 +1,5 @@
-CREATE DATABASE db_badge_system;
-USE db_badge_system;
+CREATE DATABASE elouantercier_badge_system;
+USE elouantercier_badge_system;
 CREATE TABLE t_role (
     pk_role INT PRIMARY KEY AUTO_INCREMENT,
     nom_role VARCHAR(30) NOT NULL UNIQUE
@@ -9,7 +9,7 @@ CREATE TABLE t_utilisateur (
     prenom VARCHAR(15) NOT NULL,
     nom VARCHAR(20) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    id_badge INT NOT NULL UNIQUE,
+    id_badge VARCHAR(50) NOT NULL UNIQUE,
     date_creation DATE DEFAULT (CURRENT_DATE),
     taux_horaire DECIMAL(6, 2) NOT NULL DEFAULT 0,
     fk_role INT,
