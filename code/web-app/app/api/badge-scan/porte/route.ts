@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifySignature } from "@/lib/signature";
 
 export async function POST(req: Request) {
   try {
-    const { badgeId, readerId, timestamp, signature } = await req.json();
+    const { badgeId, readerId } = await req.json();
 
-    // Vérifier signature + anti-rejeu
-    const sig = verifySignature({ badgeId, readerId, timestamp, signature });
-    if (!sig.ok) {
-      const reason = (sig as any).reason || "INVALID_SIGNATURE";
-      const action = `Requête signée invalide (${reason}) pour badge ${badgeId}`;
-      await db.query("INSERT INTO t_logs (action, event_type, date_action) VALUES (?, ?, ?)", [action, "warning", timestamp]);
-      return NextResponse.json({ allowed: false, reason });
-    }
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
 
     const porteId = Number(readerId);
     if (Number.isNaN(porteId)) {

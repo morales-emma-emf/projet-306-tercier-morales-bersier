@@ -6,6 +6,7 @@ CREATE TABLE t_role (
 );
 CREATE TABLE t_utilisateur (
     pk_utilisateur INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(50) NOT NULL UNIQUE,
     prenom VARCHAR(15) NOT NULL,
     nom VARCHAR(20) NOT NULL,
     password VARCHAR(255) NOT NULL,
