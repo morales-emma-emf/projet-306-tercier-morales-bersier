@@ -22,10 +22,11 @@ async function startLCD() {
     }
 }
 
-async function afficherMessage(message) {
+async function displayMessage(message) {
     if (!lcd) return;
     try {
         const font = phidget22.LCDFont["DIMENSIONS_5X8"] || phidget22.LCDFont.DIMENSIONS_5X8;
+        lcd.clear();
         await lcd.writeText(font, 0, 0, message);
         await lcd.flush();
     } catch (err) {
@@ -33,4 +34,4 @@ async function afficherMessage(message) {
     }
 }
 
-module.exports = { startLCD, afficherMessage };
+module.exports = { startLCD, displayMessage };
