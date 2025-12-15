@@ -159,7 +159,7 @@ export default function DevPage() {
   if (!data) return <div className="p-8">Erreur de chargement</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-white">
       <h1 className="text-3xl font-bold">Interface de Développement (Dev Only)</h1>
 
       {/* SECTION 1: GESTION UTILISATEURS */}
