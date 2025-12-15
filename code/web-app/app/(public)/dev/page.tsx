@@ -18,6 +18,7 @@ export default function DevPage() {
   // User Form State
   const [formData, setFormData] = useState({
     pk_utilisateur: "",
+    email: "",
     prenom: "",
     nom: "",
     password: "1234",
@@ -129,6 +130,7 @@ export default function DevPage() {
   const handleEditUser = (user: any) => {
     setFormData({
       pk_utilisateur: user.pk_utilisateur.toString(),
+      email: user.email || "",
       prenom: user.prenom,
       nom: user.nom,
       password: user.password,
@@ -142,6 +144,7 @@ export default function DevPage() {
   const resetUserForm = () => {
     setFormData({
       pk_utilisateur: "",
+      email: "",
       prenom: "",
       nom: "",
       password: "1234",
@@ -166,6 +169,16 @@ export default function DevPage() {
             {isEditing ? "Modifier Utilisateur" : "Ajouter Utilisateur"}
           </h2>
           <form onSubmit={handleUserSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium">Email</label>
+              <input
+                type="email"
+                className="w-full border p-2 rounded"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium">Prénom</label>
@@ -263,6 +276,7 @@ export default function DevPage() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-2">ID</th>
+                <th className="p-2">Email</th>
                 <th className="p-2">Nom</th>
                 <th className="p-2">Badge</th>
                 <th className="p-2">Rôle</th>
@@ -273,6 +287,7 @@ export default function DevPage() {
               {data.users.map((user) => (
                 <tr key={user.pk_utilisateur} className="border-b hover:bg-gray-50">
                   <td className="p-2">{user.pk_utilisateur}</td>
+                  <td className="p-2">{user.email}</td>
                   <td className="p-2">{user.prenom} {user.nom}</td>
                   <td className="p-2">{user.id_badge}</td>
                   <td className="p-2">{user.nom_role || "-"}</td>
