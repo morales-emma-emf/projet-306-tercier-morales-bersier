@@ -1,7 +1,7 @@
-import * as phidget22 from "phidget22";
+const phidget22 = require("phidget22");
 
 let lastTag = "Aucun tag détecté";
-
+let id = ""
 export async function startRFID() {
     const conn = new phidget22.NetworkConnection(5661, "localhost");
 
@@ -14,7 +14,7 @@ export async function startRFID() {
     }
 
     const rfid = new phidget22.RFID();
-
+    id = rfid.deviceSerialNumber
     rfid.onAttach = () => {
         console.log("RFID connecté !");
     };
@@ -35,7 +35,9 @@ export async function startRFID() {
         console.error("Erreur RFID:", err);
     }
 }
-
+export function getIDPorte(){
+    return id;
+}
 export function getLastTag() {
     return lastTag;
 }
