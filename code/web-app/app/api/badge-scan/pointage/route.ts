@@ -5,7 +5,8 @@ export async function POST(req: Request) {
   try {
     const { badgeId, readerId } = await req.json();
     // Utiliser le timestamp serveur pour éviter de faire confiance au client
-    const serverTimestamp = new Date().toISOString();
+    // Format MySQL compatible: YYYY-MM-DD HH:MM:SS
+    const serverTimestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     const [userRows] = (await db.query(
       "SELECT * FROM t_utilisateur WHERE id_badge = ?",
