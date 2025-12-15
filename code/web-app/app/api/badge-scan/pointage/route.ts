@@ -52,7 +52,7 @@ export async function POST(req: Request) {
           [action, "access", serverTimestamp, user.pk_utilisateur]
         );
 
-        return NextResponse.json({ allowed: true, action: "POINTAGE_SORTIE", user: { id: user.pk_utilisateur } });
+        return NextResponse.json({ allowed: true, action: "POINTAGE_SORTIE", user: { id: user.pk_utilisateur, prenom: user.prenom, nom: user.nom } });
       } else {
         // entrée (pointage de début de journée)
         const heureEntree = serverTimestamp;
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
           [action, "access", serverTimestamp, user.pk_utilisateur]
         );
 
-        return NextResponse.json({ allowed: true, action: "POINTAGE_ENTREE", user: { id: user.pk_utilisateur } });
+        return NextResponse.json({ allowed: true, action: "POINTAGE_ENTREE", user: { id: user.pk_utilisateur, prenom: user.prenom, nom: user.nom } });
       }
     }
 
