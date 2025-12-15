@@ -22,7 +22,7 @@ async function startLCD() {
     }
 }
 
-async function displayMessage(message, x = 0, y = 0, fontKey = "DIMENSIONS_5X8") {
+async function afficherMessage(message, x = 0, y = 0, fontKey = "DIMENSIONS_5X8") {
     if (!lcd) return;
     try {
         const font = phidget22.LCDFont[fontKey] || phidget22.LCDFont.DIMENSIONS_5X8;
@@ -33,4 +33,4 @@ async function displayMessage(message, x = 0, y = 0, fontKey = "DIMENSIONS_5X8")
     }
 }
 
-module.exports = { startLCD, displayMessage };
+module.exports = { startLCD, afficherMessage };
