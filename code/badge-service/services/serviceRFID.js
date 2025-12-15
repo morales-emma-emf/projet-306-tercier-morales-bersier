@@ -1,7 +1,7 @@
 const { startRFID, setOnTagCallback } = require("../Api/apiRFID.js");
 const lcdService = require("./serviceLCD.js");
 
-const SERVER_URL = "http://localhost:3001/api/badge-scan/pointage";
+const SERVER_URL = "http://localhost:3000/api/badge-scan/pointage";
 const READER_ID = "pointage";
 
 let lastTag = null;
