@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/password";
 
 export async function GET() {
   try {
@@ -89,17 +90,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const { prenom, nom, password, id_badge, taux_horaire, fk_role } = body;
+    const { email, prenom, nom, password, id_badge, taux_horaire, fk_role } = body;
 
     // Basic validation
-    if (!prenom || !nom || !id_badge) {
+    if (!email || !prenom || !nom || !id_badge) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const hashedPassword = await hashPassword(password || "1234");
+
     await db.query(
-      `INSERT INTO t_utilisateur (prenom, nom, password, id_badge, taux_horaire, fk_role) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [prenom, nom, password || "1234", id_badge, taux_horaire || 0, fk_role || null]
+      `INSERT INTO t_utilisateur (email, prenom, nom, password, id_badge, taux_horaire, fk_role) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [email, prenom, nom, hashedPassword, id_badge, taux_horaire || 0, fk_role || null]
     );
 
     return NextResponse.json({ success: true });
@@ -112,18 +115,18 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { pk_utilisateur, prenom, nom, password, id_badge, taux_horaire, fk_role } = body;
+    const { pk_utilisateur, email, prenom, nom, password, id_badge, taux_horaire, fk_role } = body;
 
     if (!pk_utilisateur) {
       return NextResponse.json({ error: "Missing pk_utilisateur" }, { status: 400 });
     }
-
+const hashedPassword = await hashPassword(password || "1234");
     // Build dynamic query or just update all fields for simplicity in dev
     await db.query(
       `UPDATE t_utilisateur 
-       SET prenom = ?, nom = ?, password = ?, id_badge = ?, taux_horaire = ?, fk_role = ?
+       SET email = ?, prenom = ?, nom = ?, password = ?, id_badge = ?, taux_horaire = ?, fk_role = ?
        WHERE pk_utilisateur = ?`,
-      [prenom, nom, password, id_badge, taux_horaire, fk_role, pk_utilisateur]
+      [email, prenom, nom, hashedPassword, id_badge, taux_horaire, fk_role, pk_utilisateur]
     );
 
     return NextResponse.json({ success: true });

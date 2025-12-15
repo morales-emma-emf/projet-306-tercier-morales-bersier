@@ -4,8 +4,9 @@ INSERT INTO t_role (nom_role)
 VALUES ('admin'),
     ('employee');
 -- Utilisateurs
-INSERT INTO t_utilisateur (prenom, nom, password, id_badge, fk_role)
+INSERT INTO t_utilisateur (email, prenom, nom, password, id_badge, fk_role)
 VALUES (
+        'alice.dupont@example.com',
         'Alice',
         'Dupont',
         'password123',
@@ -17,6 +18,7 @@ VALUES (
         )
     ),
     (
+        'bob.martin@example.com',
         'Bob',
         'Martin',
         'password123',
