@@ -18,7 +18,7 @@ CREATE TABLE t_utilisateur (
     CONSTRAINT fk_utilisateur_role FOREIGN KEY (fk_role) REFERENCES t_role(pk_role)
 );
 CREATE TABLE t_porte (
-    pk_porte INT PRIMARY KEY AUTO_INCREMENT,
+    pk_porte INT PRIMARY KEY,
     titre VARCHAR(50) NOT NULL,
     description VARCHAR(255),
     token_auth VARCHAR(100) DEFAULT NULL

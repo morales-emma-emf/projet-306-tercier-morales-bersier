@@ -1,5 +1,5 @@
 /* ===== PAGE D'ACCUEIL ===== */
-body {
+/* body {
     background-color: #1A232F;
 }
 
@@ -72,7 +72,7 @@ body {
   background: #334155;
 }
 
-/* ===== PAGE LOGIN ===== */
+
 
 .login {
   min-height: 100vh;
@@ -136,3 +136,4 @@ body {
   width: 100%;
   margin-top: 1rem;
 }
+ */
