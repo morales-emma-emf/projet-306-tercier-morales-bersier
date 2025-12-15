@@ -39,7 +39,7 @@ export default function DevPage() {
     const body = {
       ...formData,
       pk_utilisateur: formData.pk_utilisateur ? parseInt(formData.pk_utilisateur) : undefined,
-      id_badge: parseInt(formData.id_badge),
+      id_badge: formData.id_badge, // Keep as string
       taux_horaire: parseFloat(formData.taux_horaire.toString()),
       fk_role: formData.fk_role ? parseInt(formData.fk_role) : null,
     };
@@ -127,7 +127,7 @@ export default function DevPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium">ID Badge</label>
+              <label className="block text-sm font-medium">ID Badge (Alphanumérique)</label>
               <input
                 type="text"
                 className="w-full border p-2 rounded"
