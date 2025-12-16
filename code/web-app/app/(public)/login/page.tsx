@@ -1,7 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
-  async function handleSubmit(e) {
+  const router = useRouter();
+
+  async function handleSubmit(e: any) {
     e.preventDefault();
 
     const email = e.target.email.value;
@@ -22,16 +26,19 @@ export default function LoginPage() {
       return;
     }
 
-    alert("Connexion réussie");
+    if (data.user.fk_role === 1) {
+      router.push("/dashboard");
+    } else {
+      alert("Accès réservé aux administrateurs");
+    }
+    
   }
 
   return (
     <main className="login">
       <section className="login-card">
         <h1>Connexion</h1>
-        <p className="login-subtitle">
-          Accès au portail de gestion
-        </p>
+        <p className="login-subtitle">Accès au portail de gestion</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="field">
