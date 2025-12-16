@@ -1,8 +1,8 @@
 const { startRFID, setOnTagCallback } = require("../Api/apiRFID.js");
 const lcdService = require("./serviceLCD.js");
 
-const SERVER_URL = "http://localhost:3000/api/badge-scan/pointage";
-const READER_ID = "pointage";
+const SERVER_URL = "http://localhost:3000/api/badge-scan/porte";
+const READER_ID = 12;
 
 let lastTag = null;
 let lastTime = 0;
@@ -49,6 +49,7 @@ async function handleTag(tag) {
             console.log("Accès refusé");
             await lcdService.showMessage("Acces refuse");
         }
+        
 
     } catch (err) {
         console.error("Erreur serveur :", err.message);
