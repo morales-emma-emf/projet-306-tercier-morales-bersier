@@ -7,12 +7,12 @@ export async function login(userData: any) {
   const session = await signToken({ user: userData, expires });
 
   // Sauvegarder dans les cookies
-  cookies().set("session", session, { expires, httpOnly: true });
+  (await cookies()).set("session", session, { expires, httpOnly: true });
 }
 
 export async function logout() {
   // Détruire la session
-  cookies().set("session", "", { expires: new Date(0) });
+  (await cookies()).set("session", "", { expires: new Date(0) });
 }
 
 export async function decrypt(token: string) {
@@ -20,7 +20,8 @@ export async function decrypt(token: string) {
 }
 
 export async function getSession() {
-  const session = cookies().get("session")?.value;
+  const cookieStore = await cookies();
+  const session = cookieStore.get("session")?.value;
   if (!session) return null;
   return await verifyToken(session);
 }
