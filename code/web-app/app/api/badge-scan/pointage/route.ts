@@ -37,6 +37,24 @@ export async function POST(req: Request) {
         // sortie (pointage de fin de journée)
         const heureSortie = serverTimestamp;
         const entreeMs = lastPointage && lastPointage.heure_entree ? new Date(lastPointage.heure_entree).getTime() : NaN;
+        const entreDate = new Date(lastPointage.heure_entree).toISOString().slice(0, 10);
+        const sortieDate = new Date(heureSortie).toISOString().slice(0, 10);
+        
+        // Si la date a changé, considérer comme une nouvelle entrée
+        if (entreDate !== sortieDate) {
+          const heureEntree = serverTimestamp;
+          await db.query(
+        "INSERT INTO t_pointage (fk_utilisateur, date_pointage, heure_entree) VALUES (?, ?, ?)",
+        [user.pk_utilisateur, serverTimestamp, heureEntree]
+          );
+          const action = `Entrée : ${user.nom} ${user.prenom} à ${heureEntree}`;
+          await db.query(
+        "INSERT INTO t_logs (action, event_type, date_action, fk_utilisateur) VALUES (?, ?, ?, ?)",
+        [action, "access", serverTimestamp, user.pk_utilisateur]
+          );
+          return NextResponse.json({ allowed: true, action: "POINTAGE_ENTREE", user: { id: user.pk_utilisateur, prenom: user.prenom, nom: user.nom } });
+        }
+        
         let dureeMinutes: number | null = null;
         if (!Number.isNaN(entreeMs)) {
           dureeMinutes = Math.floor((new Date(heureSortie).getTime() - entreeMs) / 60000);
