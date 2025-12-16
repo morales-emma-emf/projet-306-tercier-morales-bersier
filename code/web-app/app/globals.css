@@ -1,3 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
 /* ===== PAGE D'ACCUEIL ===== */
 /* body {
     background-color: #1A232F;
