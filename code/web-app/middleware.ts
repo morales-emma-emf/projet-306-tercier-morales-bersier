@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { decrypt } from "@/lib/auth";
-import { getSession } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
-  const session = await getSession();;
+  const cookie = request.cookies.get("session");
+  const session = cookie ? await decrypt(cookie.value) : null;
   
   // Décrypter la session si elle existe
   const payload = session;
