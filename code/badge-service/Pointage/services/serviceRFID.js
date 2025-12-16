@@ -47,7 +47,7 @@ async function handleTag(tag) {
             }
         } else {
             console.log("Accès refusé");
-            await lcdService.showMessage("Acces refuse");
+            await lcdService.showMessage("Acces refuse","");
         }
         
 

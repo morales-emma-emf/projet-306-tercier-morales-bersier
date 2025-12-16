@@ -36,15 +36,10 @@ async function handleTag(tag) {
         console.log("Réponse serveur :", data);
 
         if (data.allowed) {
-            if (data.action === "POINTAGE_ENTREE") {
-                const msg = `Bienvenue ${data.user.prenom} ${data.user.nom}`;
+                const msg = `Acces autorise`;
                 console.log(msg);
                 await lcdService.showMessage(msg);
-            } else if (data.action === "POINTAGE_SORTIE") {
-                const msg = `Au revoir ${data.user.prenom} ${data.user.nom}`;
-                console.log(msg);
-                await lcdService.showMessage(msg);
-            }
+            
         } else {
             console.log("Accès refusé");
             await lcdService.showMessage("Acces refuse");

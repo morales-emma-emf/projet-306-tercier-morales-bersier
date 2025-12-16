@@ -22,13 +22,12 @@ async function startLCD() {
     }
 }
 
-async function displayMessage(message1, message2) {
+async function displayMessage(message1) {
     if (!lcd) return;
     try {
         const font = phidget22.LCDFont["DIMENSIONS_5X8"] || phidget22.LCDFont.DIMENSIONS_5X8;
         lcd.clear();
         await lcd.writeText(font, 0, 0, message1);
-        await lcd.writeText(font, 1, 0, message2);
 
         await lcd.flush();
     } catch (err) {
