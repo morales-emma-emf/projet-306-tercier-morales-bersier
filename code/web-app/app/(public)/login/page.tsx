@@ -7,7 +7,7 @@ export default function LoginPage() {
     const email = e.target.email.value;
     const password = e.target.password.value;
 
-    const res = await fetch("/api/login", {
+    const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

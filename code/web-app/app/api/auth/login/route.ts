@@ -35,8 +35,6 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
-
-    // ✅ LOGIN OK (sans session pour l’école)
     return NextResponse.json({
       success: true,
       user: {
