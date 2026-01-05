@@ -1,7 +1,6 @@
 node_modules
 .vercel
-.env.local
-.env*
+
 documentation/
 code/badge-service/
 code/readme.md
