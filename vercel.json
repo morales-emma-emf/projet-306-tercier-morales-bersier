@@ -5,6 +5,5 @@
     { "src": "code/web-app/package.json", "use": "@vercel/next" }
   ],
   "installCommand": "cd code/web-app && npm install",
-  "buildCommand": "cd code/web-app && npm run build",
-  "outputDirectory": "code/web-app/.next"
+  "buildCommand": "cd code/web-app && npm run build"
 }
