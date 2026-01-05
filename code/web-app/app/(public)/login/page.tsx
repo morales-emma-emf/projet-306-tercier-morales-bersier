@@ -115,7 +115,7 @@ export default function LoginPage() {
         </form>
   
         <p className="text-center text-xs text-[#94a3b8] mt-6">
-          Badge system · Projet scolaire
+          Badge system · Emma - Elouan - Noé
         </p>
       </section>
     </main>
