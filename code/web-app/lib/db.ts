@@ -10,18 +10,21 @@ const getSanitizedPassword = (pass: string | undefined) => {
 };
 
 const dbPassword = getSanitizedPassword(process.env.DB_PASS);
+const connectionLimit = Number(process.env.DB_CONN_LIMIT || 5);
 
-console.log("DB Config:", {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  database: process.env.DB_NAME,
-  passwordLength: dbPassword?.length,
-  originalPasswordLength: process.env.DB_PASS?.length,
-});
+// Éviter de créer plusieurs pools en dev (HMR) pour ne pas dépasser max_user_connections
+const globalWithPool = globalThis as typeof globalThis & { mysqlPool?: mysql.Pool };
 
-export const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: dbPassword,
-  database: process.env.DB_NAME,
-});
+if (!globalWithPool.mysqlPool) {
+  globalWithPool.mysqlPool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: dbPassword,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit,
+    queueLimit: 0,
+  });
+}
+
+export const db = globalWithPool.mysqlPool;

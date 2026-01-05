@@ -8,11 +8,11 @@ async function isAdmin() {
   const session = await getSession();
   if (!session || typeof session !== "object" || !("user" in session)) return false;
   const user = (session as any).user;
-  return user.pk_role === 1;
+  return user.fk_role === 1;
 }
 
 export async function GET(req: Request) {
-  if (!await isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ message: "Accès interdit" }, { status: 403 });
   }
 
@@ -21,15 +21,18 @@ export async function GET(req: Request) {
 
   try {
     if (id) {
-      const [users] = await db.query("SELECT pk_utilisateur, email, prenom, nom, id_badge, date_creation, taux_horaire, fk_role FROM t_utilisateur WHERE pk_utilisateur = ?", [id]) as any;
-      if (users.length === 0) {
+      const [users] = (await db.query(
+        "SELECT pk_utilisateur, email, prenom, nom, id_badge, date_creation, taux_horaire, fk_role FROM t_utilisateur WHERE pk_utilisateur = ?",
+        [id]
+      )) as any;
+      if (!users.length) {
         return NextResponse.json({ message: "Utilisateur non trouvé" }, { status: 404 });
       }
       return NextResponse.json(users[0]);
-    } else {
-      const [users] = await db.query("SELECT * FROM t_utilisateur") as any;
-      return NextResponse.json(users);
     }
+
+    const [users] = (await db.query("SELECT * FROM t_utilisateur")) as any;
+    return NextResponse.json(users);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

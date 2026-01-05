@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   }
  
   // 3) protéger dashboard/users (ADMIN only)
-  if (path.startsWith("/dashboard") || path.startsWith("/users")) {
+  if (path.startsWith("/dashboard") || path.startsWith("/users") || path.startsWith("/logs")) {
     const role = (payload as any)?.user?.fk_role;
     if (Number(role) !== 1) {
       return NextResponse.redirect(new URL("/login", request.url));

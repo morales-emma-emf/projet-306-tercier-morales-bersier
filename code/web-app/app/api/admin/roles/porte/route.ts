@@ -7,7 +7,7 @@ async function isAdmin() {
   const session = await getSession();
   if (!session || typeof session !== "object" || !("user" in session)) return false;
   const user = (session as any).user;
-  return user.pk_role === 1;
+  return user.fk_role === 1;
 }
 
 export async function GET(req: Request) {
