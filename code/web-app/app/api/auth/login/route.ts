@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { login } from "@/lib/auth"; 
 
 export async function POST(req: Request) {
   try {
@@ -28,28 +29,30 @@ export async function POST(req: Request) {
     const user = rows[0];
 
     const isValid = await verifyPassword(password, user.password);
-
     if (!isValid) {
       return NextResponse.json(
         { message: "Mot de passe incorrect" },
         { status: 401 }
       );
     }
+
+    const userData = {
+      pk_utilisateur: user.pk_utilisateur,
+      email: user.email,
+      prenom: user.prenom,
+      nom: user.nom,
+      fk_role: user.fk_role,
+    };
+
+
+    await login(userData);
+
     return NextResponse.json({
       success: true,
-      user: {
-        pk_utilisateur: user.pk_utilisateur,
-        email: user.email,
-        prenom: user.prenom,
-        nom: user.nom,
-        fk_role: user.fk_role,
-      },
+      user: userData,
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    return NextResponse.json(
-      { message: "Erreur serveur" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
 }
