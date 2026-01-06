@@ -25,7 +25,7 @@ async function startLCD() {
         await lcd.open(5000);
         console.log("LCD prêt !");
         await lcd.clear();
-        await lcd.writeText(phidget22.LCDFont.DIMENSIONS_5X8, 0, 0, "bonjour");
+        await lcd.writeText(phidget22.LCDFont.DIMENSIONS_5X8, 0, 0, "scannez votre badge");
         await lcd.flush();
     } catch (err) {
         console.error("Erreur LCD:", err);

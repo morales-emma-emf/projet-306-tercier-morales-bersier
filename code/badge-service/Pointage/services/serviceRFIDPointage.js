@@ -29,6 +29,7 @@ async function handleTag(tag) {
         if (!res.ok) {
             console.error(`Erreur HTTP: ${res.status}`);
             await lcdService.showMessage("Erreur serveur");
+            setTimeout(() => lcdService.showMessage("Attente badge"), 5000);
             return;
         }
 
@@ -49,11 +50,13 @@ async function handleTag(tag) {
             console.log("Accès refusé");
             await lcdService.showMessage("Acces refuse");
         }
-        
+
+        setTimeout(() => lcdService.showMessage("Attente badge"), 5000);
 
     } catch (err) {
         console.error("Erreur serveur :", err.message);
         await lcdService.showMessage("Erreur serveur");
+        setTimeout(() => lcdService.showMessage("Attente badge"), 5000);
     }
 }
 
