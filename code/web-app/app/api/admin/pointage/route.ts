@@ -47,11 +47,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "heure_entree est obligatoire" }, { status: 400 });
     }
 
-    // ✅ format MySQL DATETIME
+  
     const heure_entree = toMysqlDatetime(String(heure_entree_raw));
     const heure_sortie = heure_sortie_raw ? toMysqlDatetime(String(heure_sortie_raw)) : null;
 
-    // ✅ Vérif sortie >= entrée (si fournie)
+    
     if (heure_sortie_raw) {
       const s = new Date(String(heure_entree_raw)).getTime();
       const e = new Date(String(heure_sortie_raw)).getTime();
@@ -63,8 +63,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // ✅ pour ta table: date_pointage est DATETIME NOT NULL
-    // -> on met la même valeur que heure_entree (simple + cohérent)
+    // -> on met la même valeur que heure_entree (simple + cohérent 
     const date_pointage = heure_entree;
 
     const duree_minutes =
