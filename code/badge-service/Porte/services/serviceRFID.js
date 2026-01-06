@@ -1,8 +1,8 @@
 const { startRFID, setOnTagCallback } = require("../Api/apiRFID.js");
 const lcdService = require("./serviceLCD.js");
 
-const SERVER_URL = "https://badge-elouan.vercel.app/api/badge-scan/porte";
-const READER_ID = 1;
+const SERVER_URL = `${process.env.NEXT_API_URL}/api/badge-scan/porte`;
+const READER_ID = process.env.PORTE_READER_ID;
 
 let lastTag = null;
 let lastTime = 0;
