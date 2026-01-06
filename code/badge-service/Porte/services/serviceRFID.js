@@ -1,9 +1,10 @@
 const { startRFID, setOnTagCallback } = require("../Api/apiRFID.js");
 const lcdService = require("./serviceLCD.js");
 
-const SERVER_URL = "http://localhost:3000/api/badge-scan/porte";
-const READER_ID = 12;
+const SERVER_URL = process.env.SERVER_URL;
+const READER_ID = process.env.READER_ID;
 
+console.log("Configuration RFID :", { SERVER_URL, READER_ID });
 let lastTag = null;
 let lastTime = 0;
 async function handleTag(tag) {
@@ -29,6 +30,7 @@ async function handleTag(tag) {
         if (!res.ok) {
             console.error(`Erreur HTTP: ${res.status}`);
             await lcdService.showMessage("Erreur serveur");
+            setTimeout(() => lcdService.showMessage("Scannez votre badge"), 5000);
             return;
         }
 
@@ -36,19 +38,21 @@ async function handleTag(tag) {
         console.log("Réponse serveur :", data);
 
         if (data.allowed) {
-                const msg = `Acces autorise`;
-                console.log(msg);
-                await lcdService.showMessage(msg);
-            
+            const msg = `Acces autorise`;
+            console.log(msg);
+            await lcdService.showMessage(msg);
+
         } else {
             console.log("Accès refusé");
             await lcdService.showMessage("Acces refuse");
         }
-        
+
+        setTimeout(() => lcdService.showMessage("Scannez votre badge"), 5000);
 
     } catch (err) {
         console.error("Erreur serveur :", err.message);
         await lcdService.showMessage("Erreur serveur");
+        setTimeout(() => lcdService.showMessage("Scannez votre badge"), 5000);
     }
 }
 

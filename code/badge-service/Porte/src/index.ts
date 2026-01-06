@@ -5,7 +5,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
+const NEXT_API_URL = process.env.NEXT_API_URL;
 
 async function main() {
   try {

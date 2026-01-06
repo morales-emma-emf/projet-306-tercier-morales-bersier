@@ -8,11 +8,11 @@ export async function initLeds() {
         // Note: Channel numbers depend on your specific Phidget wiring.
         // Adjust 0 and 1 to match your hardware setup.
         greenLed = new DigitalOutput();
-        greenLed.setChannel(0); 
+        greenLed.setChannel(0);
         await greenLed.open(5000);
 
         redLed = new DigitalOutput();
-        redLed.setChannel(1); 
+        redLed.setChannel(1);
         await redLed.open(5000);
     } catch (e) {
         console.error("Failed to init LEDs (Hardware might be missing):", e);
