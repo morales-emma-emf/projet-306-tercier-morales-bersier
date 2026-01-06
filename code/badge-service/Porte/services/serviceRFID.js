@@ -1,8 +1,8 @@
 const { startRFID, setOnTagCallback } = require("../Api/apiRFID.js");
 const lcdService = require("./serviceLCD.js");
 
-const SERVER_URL = `${process.env.NEXT_API_URL}/api/badge-scan/porte`;
-const READER_ID = process.env.PORTE_READER_ID;
+const SERVER_URL = process.env.SERVER_URL;
+const READER_ID = process.env.READER_ID;
 
 let lastTag = null;
 let lastTime = 0;

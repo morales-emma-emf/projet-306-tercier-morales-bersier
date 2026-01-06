@@ -41,9 +41,6 @@ nmcli radio wifi on
 systemctl start NetworkManager
 sleep 5
 
-echo "Scan des réseaux..."
-nmcli dev wifi list
-
 echo "Tentative de connexion au SSID : 7links..."
 # Essai avec nmcli avec priorité élevée
 nmcli dev wifi connect "7Links" password "#326IsBest#"
