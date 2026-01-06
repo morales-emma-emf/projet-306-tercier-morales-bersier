@@ -19,8 +19,34 @@ echo "--- Configuration pour l'utilisateur : $REAL_USER ---"
 
 # 1. Connexion au Wi-Fi
 echo "--- 1. Configuration du Wi-Fi ---"
+
+# Installation de rfkill et iw pour gérer le blocage (soft block) et la région
+if ! command -v rfkill &> /dev/null; then
+    apt-get update && apt-get install -y rfkill iw network-manager
+fi
+
+echo "Déblocage du Wi-Fi..."
+# Définir le code pays (obligatoire sur RPi pour activer le 5GHz et débloquer le Wi-Fi)
+echo "Configuration de la région Wi-Fi (CH)..."
+iw reg set CH 2>/dev/null || echo "Impossible de définir la région avec iw"
+
+rfkill unblock wifi
+rfkill unblock all
+
+echo "Activation de l'interface wlan0..."
+ip link set wlan0 up
+nmcli radio wifi on
+
+# S'assurer que le service NetworkManager est démarré
+systemctl start NetworkManager
+sleep 5
+
+echo "Scan des réseaux..."
+nmcli dev wifi list
+
 echo "Tentative de connexion au SSID : 7links..."
-nmcli dev wifi connect "7links" password "#326IsBest#"
+# Essai avec nmcli avec priorité élevée
+nmcli dev wifi connect "7Links" password "#326IsBest#"
 if [ $? -eq 0 ]; then
     echo "Wi-Fi connecté avec succès."
 else
