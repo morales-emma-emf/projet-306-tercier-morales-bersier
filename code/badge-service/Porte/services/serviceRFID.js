@@ -4,6 +4,7 @@ const lcdService = require("./serviceLCD.js");
 const SERVER_URL = process.env.SERVER_URL;
 const READER_ID = process.env.READER_ID;
 
+console.log("Configuration RFID :", { SERVER_URL, READER_ID });
 let lastTag = null;
 let lastTime = 0;
 async function handleTag(tag) {

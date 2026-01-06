@@ -26,7 +26,7 @@ async function startRFID() {
         }
     };
 
-    rfid.onTagLost = () => {};
+    rfid.onTagLost = () => { };
 
     await rfid.open(5000);
     console.log("RFID prêt");
