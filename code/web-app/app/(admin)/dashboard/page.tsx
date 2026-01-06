@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import PresenceModal from "@/components/public/presence";
 
 type User = {
   pk_utilisateur: number;
@@ -159,6 +160,9 @@ export default function DashboardPage() {
   const [userEditSaving, setUserEditSaving] = useState(false);
   const [showUserEditForm, setShowUserEditForm] = useState(false);
   const [showRoleEdit, setShowRoleEdit] = useState(false);
+  const [presenceModalOpen, setPresenceModalOpen] = useState(false);
+  const [presenceUserId, setPresenceUserId] = useState<number | null>(null);
+
 
   useEffect(() => {
     let active = true;
@@ -201,8 +205,10 @@ export default function DashboardPage() {
   };
 
   const handlePresence = (userId: number) => {
-    // ici appeler pour la présense
+    setPresenceUserId(userId);
+    setPresenceModalOpen(true);
   };
+
 
   const handleAccess = (user: User) => {
     setSelectedUser(user);
@@ -580,22 +586,7 @@ export default function DashboardPage() {
         prev.map((u) =>
           u.pk_utilisateur === selectedUser.pk_utilisateur
             ? {
-                ...u,
-                email: userEditForm.email.trim(),
-                prenom: userEditForm.prenom.trim(),
-                nom: userEditForm.nom.trim(),
-                id_badge: userEditForm.id_badge.trim(),
-                taux_horaire: userEditForm.taux_horaire === "" ? null : Number(userEditForm.taux_horaire),
-                fk_role: roleSelection ?? null,
-              }
-            : u
-        )
-      );
-
-      setSelectedUser((prev) =>
-        prev
-          ? {
-              ...prev,
+              ...u,
               email: userEditForm.email.trim(),
               prenom: userEditForm.prenom.trim(),
               nom: userEditForm.nom.trim(),
@@ -603,6 +594,21 @@ export default function DashboardPage() {
               taux_horaire: userEditForm.taux_horaire === "" ? null : Number(userEditForm.taux_horaire),
               fk_role: roleSelection ?? null,
             }
+            : u
+        )
+      );
+
+      setSelectedUser((prev) =>
+        prev
+          ? {
+            ...prev,
+            email: userEditForm.email.trim(),
+            prenom: userEditForm.prenom.trim(),
+            nom: userEditForm.nom.trim(),
+            id_badge: userEditForm.id_badge.trim(),
+            taux_horaire: userEditForm.taux_horaire === "" ? null : Number(userEditForm.taux_horaire),
+            fk_role: roleSelection ?? null,
+          }
           : prev
       );
 
@@ -1132,9 +1138,9 @@ export default function DashboardPage() {
                   {roleLabel(selectedUser.fk_role)}
                 </span>
               </div>
-         
+
               <div className="flex flex-wrap items-center gap-3">
-   
+
                 <button
                   className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-800"
                   onClick={() => {
@@ -1235,7 +1241,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
-         
+
 
               <div className="rounded-2xl border border-slate-800 bg-slate-800/40 px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
@@ -1295,7 +1301,7 @@ export default function DashboardPage() {
               >
                 Fermer
               </button>
-          {/*     <button
+              {/*     <button
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white opacity-70"
                 disabled
               >
@@ -1305,6 +1311,16 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      <PresenceModal
+        open={presenceModalOpen}
+        onClose={() => {
+          setPresenceModalOpen(false);
+          setPresenceUserId(null);
+        }}
+        userId={presenceUserId}
+        title="Planning de présence"
+      />
+
     </main>
   );
 }
