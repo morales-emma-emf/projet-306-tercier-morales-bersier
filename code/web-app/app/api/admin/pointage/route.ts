@@ -1,153 +1,84 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
 
-// Helper pour vérifier si l'utilisateur est admin
-async function isAdmin() {
-  const session = await getSession();
-  if (!session || typeof session !== "object" || !("user" in session)) return false;
-  const user = (session as any).user;
-  return user.fk_role === 1;
+function pad(n: number) {
+  return String(n).padStart(2, "0");
 }
 
-export async function GET(req: Request) {
-  if (!await isAdmin()) {
-    return NextResponse.json({ message: "Accès interdit" }, { status: 403 });
-  }
+/**
+ * Convertit une date (datetime-local OU ISO) en "YYYY-MM-DD HH:mm:ss"
+ * en heure LOCALE (adapté à MySQL DATETIME).
+ */
+function toMysqlDatetime(input: string) {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) throw new Error("Date invalide");
 
-  const { searchParams } = new URL(req.url);
-  const fk_utilisateur = searchParams.get("userid");
-  const start_date = searchParams.get("start_date");
-  const end_date = searchParams.get("end_date");
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  const ss = pad(d.getSeconds());
 
-  try {
-    let query = `
-      SELECT p.*, u.prenom, u.nom 
-      FROM t_pointage p
-      JOIN t_utilisateur u ON p.fk_utilisateur = u.pk_utilisateur
-      WHERE 1=1
-    `;
-    const params: any[] = [];
+  return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+}
 
-    if (fk_utilisateur) {
-      query += " AND p.fk_utilisateur = ?";
-      params.push(fk_utilisateur);
-    }
-
-    if (start_date) {
-      query += " AND p.date_pointage >= ?";
-      params.push(start_date);
-    }
-
-    if (end_date) {
-      const endDate = end_date.includes(" ") ? end_date : `${end_date} 23:59:59`;
-      query += " AND p.date_pointage <= ?";
-      params.push(endDate);
-    }
-
-    query += " ORDER BY p.heure_entree DESC";
-
-    const [pointages] = await db.query(query, params) as any;
-
-    // Enrichir les données pour le frontend (flag problème)
-    const enrichedPointages = pointages.map((p: any) => ({
-      ...p,
-      is_incomplete: !p.heure_sortie, // Flag pour indiquer un problème (pas de sortie)
-      title: !p.heure_sortie ? "⚠️ Pointage incomplet" : "Pointage validé"
-    }));
-
-    return NextResponse.json(enrichedPointages);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+function diffMinutes(startRaw: string, endRaw: string) {
+  const s = new Date(startRaw).getTime();
+  const e = new Date(endRaw).getTime();
+  if (Number.isNaN(s) || Number.isNaN(e)) return null;
+  const minutes = Math.round((e - s) / 60000);
+  return minutes >= 0 ? minutes : null;
 }
 
 export async function POST(req: Request) {
-  if (!await isAdmin()) {
-    return NextResponse.json({ message: "Accès interdit" }, { status: 403 });
-  }
-
   try {
     const body = await req.json();
-    const { fk_utilisateur, date_pointage, heure_entree, heure_sortie } = body;
 
-    if (!fk_utilisateur || !heure_entree) {
-      return NextResponse.json({ message: "Utilisateur et heure d'entrée requis" }, { status: 400 });
+    const fk_utilisateur = Number(body?.fk_utilisateur);
+    if (!fk_utilisateur || Number.isNaN(fk_utilisateur)) {
+      return NextResponse.json({ message: "fk_utilisateur invalide" }, { status: 400 });
     }
 
-    // Calcul de la durée si sortie présente
-    let duree_minutes = null;
-    if (heure_sortie) {
-      const start = new Date(heure_entree).getTime();
-      const end = new Date(heure_sortie).getTime();
-      duree_minutes = Math.round((end - start) / 60000);
+    const heure_entree_raw = body?.heure_entree;
+    const heure_sortie_raw = body?.heure_sortie ?? null;
+
+    if (!heure_entree_raw) {
+      return NextResponse.json({ message: "heure_entree est obligatoire" }, { status: 400 });
     }
 
-    // Si date_pointage n'est pas fourni, on prend la date de l'heure d'entrée
-    const dateRef = date_pointage || new Date(heure_entree).toISOString().split('T')[0];
+    // ✅ format MySQL DATETIME
+    const heure_entree = toMysqlDatetime(String(heure_entree_raw));
+    const heure_sortie = heure_sortie_raw ? toMysqlDatetime(String(heure_sortie_raw)) : null;
+
+    // ✅ Vérif sortie >= entrée (si fournie)
+    if (heure_sortie_raw) {
+      const s = new Date(String(heure_entree_raw)).getTime();
+      const e = new Date(String(heure_sortie_raw)).getTime();
+      if (!Number.isNaN(s) && !Number.isNaN(e) && e < s) {
+        return NextResponse.json(
+          { message: "L'heure de sortie ne peut pas être avant l'heure d'entrée." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // ✅ pour ta table: date_pointage est DATETIME NOT NULL
+    // -> on met la même valeur que heure_entree (simple + cohérent)
+    const date_pointage = heure_entree;
+
+    const duree_minutes =
+      heure_sortie_raw ? diffMinutes(String(heure_entree_raw), String(heure_sortie_raw)) : null;
 
     await db.query(
-      `INSERT INTO t_pointage (fk_utilisateur, date_pointage, heure_entree, heure_sortie, duree_minutes) 
+      `INSERT INTO t_pointage (fk_utilisateur, date_pointage, heure_entree, heure_sortie, duree_minutes)
        VALUES (?, ?, ?, ?, ?)`,
-      [fk_utilisateur, dateRef, heure_entree, heure_sortie || null, duree_minutes]
+      [fk_utilisateur, date_pointage, heure_entree, heure_sortie, duree_minutes]
     );
 
-    return NextResponse.json({ message: "Pointage créé avec succès" }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function PUT(req: Request) {
-  if (!await isAdmin()) {
-    return NextResponse.json({ message: "Accès interdit" }, { status: 403 });
-  }
-
-  try {
-    const body = await req.json();
-    const { pk_pointage, heure_entree, heure_sortie } = body;
-
-    if (!pk_pointage || !heure_entree) {
-      return NextResponse.json({ message: "ID pointage et heure d'entrée requis" }, { status: 400 });
-    }
-
-    // Recalcul de la durée
-    let duree_minutes = null;
-    if (heure_sortie) {
-      const start = new Date(heure_entree).getTime();
-      const end = new Date(heure_sortie).getTime();
-      duree_minutes = Math.round((end - start) / 60000);
-    }
-
-    await db.query(
-      `UPDATE t_pointage 
-       SET heure_entree = ?, heure_sortie = ?, duree_minutes = ? 
-       WHERE pk_pointage = ?`,
-      [heure_entree, heure_sortie || null, duree_minutes, pk_pointage]
-    );
-
-    return NextResponse.json({ message: "Pointage mis à jour avec succès" });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: Request) {
-  if (!await isAdmin()) {
-    return NextResponse.json({ message: "Accès interdit" }, { status: 403 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json({ message: "ID pointage manquant" }, { status: 400 });
-  }
-
-  try {
-    await db.query("DELETE FROM t_pointage WHERE pk_pointage = ?", [id]);
-    return NextResponse.json({ message: "Pointage supprimé avec succès" });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, message: "Pointage ajouté" });
+  } catch (e: any) {
+    console.error("POST /api/admin/pointage error:", e);
+    return NextResponse.json({ message: e?.message || "Erreur serveur" }, { status: 500 });
   }
 }

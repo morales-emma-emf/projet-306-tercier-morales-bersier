@@ -164,6 +164,15 @@ export default function DashboardPage() {
   const [presenceUserId, setPresenceUserId] = useState<number | null>(null);
 
 
+  const [pointageForm, setPointageForm] = useState({
+    heure_entree: "",
+    heure_sortie: "",
+  });
+  const [pointageSaving, setPointageSaving] = useState(false);
+  const [pointageError, setPointageError] = useState<string | null>(null);
+  const [pointageSuccess, setPointageSuccess] = useState<string | null>(null);
+
+
   useEffect(() => {
     let active = true;
 
@@ -359,6 +368,58 @@ export default function DashboardPage() {
       setAccessError(err.message || "Erreur lors de la mise à jour du rôle");
     } finally {
       setSavingRole(false);
+    }
+  };
+
+  const handleAddPointage = async () => {
+    if (!selectedUser) return;
+
+    setPointageError(null);
+    setPointageSuccess(null);
+
+    if (!pointageForm.heure_entree) {
+      setPointageError("L'heure d'entrée est obligatoire.");
+      return;
+    }
+
+    setPointageSaving(true);
+    try {
+      const payload = {
+        fk_utilisateur: selectedUser.pk_utilisateur,
+        heure_entree: new Date(pointageForm.heure_entree).toISOString(),
+        heure_sortie: pointageForm.heure_sortie
+          ? new Date(pointageForm.heure_sortie).toISOString()
+          : null,
+      };
+
+      const res = await fetch("/api/admin/pointage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+
+      if (!res.ok) {
+        let message = "Erreur lors de l'ajout du pointage.";
+        try {
+          const j = await res.json();
+          message = j?.message || j?.error || message;
+        } catch {
+          const t = await res.text();
+          message = t?.slice(0, 180) || message;
+        }
+        throw new Error(message);
+      }
+
+      setPointageSuccess("Pointage ajouté ");
+      setPointageForm({ heure_entree: "", heure_sortie: "" });
+
+      // optionnel: ouvrir direct la modal des présences
+      // handlePresence(selectedUser.pk_utilisateur);
+    } catch (e: any) {
+      setPointageError(e?.message || "Erreur inconnue");
+    } finally {
+      setPointageSaving(false);
     }
   };
 
@@ -620,6 +681,8 @@ export default function DashboardPage() {
       setUserEditSaving(false);
     }
   };
+
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -1127,6 +1190,63 @@ export default function DashboardPage() {
               </button>
             </div>
 
+            <div className="rounded-2xl border border-slate-800 bg-slate-800/40 px-4 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">Ajouter un pointage</p>
+                  <p className="text-xs text-slate-400">Saisir une entrée et (optionnel) une sortie.</p>
+                </div>
+              </div>
+
+              {pointageError && <p className="mb-2 text-xs text-red-300">{pointageError}</p>}
+              {pointageSuccess && <p className="mb-2 text-xs text-emerald-300">{pointageSuccess}</p>}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Heure d'entrée *</label>
+                  <input
+                    type="datetime-local"
+                    value={pointageForm.heure_entree}
+                    onChange={(e) => setPointageForm((p) => ({ ...p, heure_entree: e.target.value }))}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Heure de sortie (optionnel)</label>
+                  <input
+                    type="datetime-local"
+                    value={pointageForm.heure_sortie}
+                    onChange={(e) => setPointageForm((p) => ({ ...p, heure_sortie: e.target.value }))}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-60"
+                  onClick={() => {
+                    setPointageForm({ heure_entree: "", heure_sortie: "" });
+                    setPointageError(null);
+                    setPointageSuccess(null);
+                  }}
+                  disabled={pointageSaving}
+                >
+                  Réinitialiser
+                </button>
+
+                <button
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
+                  onClick={handleAddPointage}
+                  disabled={pointageSaving}
+                >
+                  {pointageSaving ? "Ajout…" : "Ajouter"}
+                </button>
+              </div>
+            </div>
+
+
             <div className="grid gap-3 text-sm text-slate-200">
               <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
                 <span className="text-slate-400">Badge</span>
@@ -1297,6 +1417,10 @@ export default function DashboardPage() {
                   setShowUserEditForm(false);
                   setUserEditError(null);
                   setShowRoleEdit(false);
+                  setPointageForm({ heure_entree: "", heure_sortie: "" });
+                  setPointageError(null);
+                  setPointageSuccess(null);
+
                 }}
               >
                 Fermer
@@ -1311,6 +1435,8 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+
       <PresenceModal
         open={presenceModalOpen}
         onClose={() => {

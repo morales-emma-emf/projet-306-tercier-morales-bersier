@@ -14,7 +14,7 @@ type PresenceEvent = {
 type Props = {
   open: boolean;
   onClose: () => void;
-  userId: number | null;     // admin: l’utilisateur sélectionné, user: son id
+  userId: number | null; // admin: l’utilisateur sélectionné, user: son id
   title?: string;
 };
 
@@ -67,14 +67,16 @@ export default function PresenceModal({ open, onClose, userId, title }: Props) {
     if (!open || !userId) return;
 
     const controller = new AbortController();
+
     const load = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const qs = new URLSearchParams({
           userid: String(userId),
           start_date: weekStart.toISOString(),
-          end_date: addDays(weekEnd, 1).toISOString(), // inclure fin de journée
+          end_date: addDays(weekEnd, 1).toISOString(), 
         });
 
         const res = await fetch(`/api/presences?${qs.toString()}`, {
@@ -100,14 +102,16 @@ export default function PresenceModal({ open, onClose, userId, title }: Props) {
 
   const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
   const startHour = 7;
-  const endHour = 18;
+  const endHour = 20;
+
+ 
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
 
   const eventToGridStyle = (evt: PresenceEvent) => {
     const s = new Date(evt.start);
     const e = new Date(evt.end);
 
-    const dayIndex = clamp((s.getDay() + 6) % 7, 0, 5); // lun..sam -> 0..5
+    const dayIndex = clamp((s.getDay() + 6) % 7, 0, 5); 
     const gridStart = startHour * 60;
     const gridEnd = endHour * 60;
 
@@ -128,6 +132,7 @@ export default function PresenceModal({ open, onClose, userId, title }: Props) {
 
       {/* modal */}
       <div className="relative mx-auto mt-8 w-[95%] max-w-6xl rounded-3xl border border-slate-800 bg-slate-900/95 shadow-2xl overflow-hidden">
+        {/* header modal */}
         <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Présences</p>
@@ -136,82 +141,115 @@ export default function PresenceModal({ open, onClose, userId, title }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800" onClick={() => setWeekOffset((w) => w - 1)}>
+            <button
+              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
+              onClick={() => setWeekOffset((w) => w - 1)}
+            >
               ◀
             </button>
-            <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800" onClick={() => setWeekOffset(0)}>
+            <button
+              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
+              onClick={() => setWeekOffset(0)}
+            >
               Semaine actuelle
             </button>
-            <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800" onClick={() => setWeekOffset((w) => w + 1)}>
+            <button
+              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800"
+              onClick={() => setWeekOffset((w) => w + 1)}
+            >
               ▶
             </button>
 
-            <button className="ml-2 rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-200 hover:bg-slate-800" onClick={onClose}>
+            <button
+              className="ml-2 rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-200 hover:bg-slate-800"
+              onClick={onClose}
+            >
               Fermer
             </button>
           </div>
         </div>
 
+        {/* content */}
         <div className="p-6">
           {loading && <p className="text-sm text-slate-400">Chargement…</p>}
           {error && <p className="text-sm text-red-300">{error}</p>}
 
           {!loading && !error && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-auto">
-              <div className="min-w-[1100px]">
-                <div className="grid grid-cols-[90px_repeat(6,1fr)] bg-slate-800/70 text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
-                  <div className="px-4 py-3">Heure</div>
-                  {days.map((d) => (
-                    <div key={d} className="px-4 py-3">{d}</div>
-                  ))}
-                </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60">
+              {/* scroll vertical + horizontal ici */}
+              <div className="max-h-[calc(100vh-220px)] overflow-auto">
+                <div className="min-w-[1100px]">
+                  {/* header planning sticky */}
+                  <div className="sticky top-0 z-10 grid grid-cols-[90px_repeat(6,1fr)] bg-slate-800/90 backdrop-blur text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
+                    <div className="px-4 py-3">Heure</div>
+                    {days.map((d) => (
+                      <div key={d} className="px-4 py-3">
+                        {d}
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="relative">
-                  {hours.map((h) => (
-                    <div key={h} className="grid grid-cols-[90px_repeat(6,1fr)] border-t border-slate-800">
-                      <div className="px-4 py-3 text-sm text-slate-300">{String(h).padStart(2, "0")}:00</div>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="px-3 py-2">
-                          <div className="h-12 rounded-xl border border-slate-800 bg-slate-950/40" />
+                  {/* grid */}
+                  <div className="relative">
+                    {hours.map((h) => (
+                      <div key={h} className="grid grid-cols-[90px_repeat(6,1fr)] border-t border-slate-800">
+                        <div className="px-4 py-3 text-sm text-slate-300">
+                          {String(h).padStart(2, "0")}:00
                         </div>
-                      ))}
-                    </div>
-                  ))}
 
-                  {/* blocs */}
-                  <div className="absolute left-[90px] top-0 right-0 bottom-0 pointer-events-none">
-                    {events.map((evt) => {
-                      const { dayIndex, topPct, heightPct } = eventToGridStyle(evt);
-                      const left = `${(dayIndex / 6) * 100}%`;
-                      const width = `${(1 / 6) * 100}%`;
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="px-3 py-2">
+                            {/*  un peu moins haut */}
+                            <div className="h-10 rounded-xl border border-slate-800 bg-slate-950/40" />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
 
-                      return (
-                        <div
-                          key={evt.id}
-                          style={{ position: "absolute", left, width, top: `${topPct}%`, height: `${heightPct}%`, padding: "8px" }}
-                        >
+                    {/* blocs */}
+                    <div className="absolute left-[90px] top-0 right-0 bottom-0 pointer-events-none">
+                      {events.map((evt) => {
+                        const { dayIndex, topPct, heightPct } = eventToGridStyle(evt);
+                        const left = `${(dayIndex / 6) * 100}%`;
+                        const width = `${(1 / 6) * 100}%`;
+
+                        return (
                           <div
-                            className={[
-                              "h-full w-full rounded-2xl border px-3 py-2 text-xs shadow-lg",
-                              evt.is_incomplete
-                                ? "border-amber-300/40 bg-amber-500/15 text-amber-100 shadow-amber-500/10"
-                                : "border-indigo-400/40 bg-indigo-500/20 text-indigo-100 shadow-indigo-500/10",
-                            ].join(" ")}
+                            key={evt.id}
+                            style={{
+                              position: "absolute",
+                              left,
+                              width,
+                              top: `${topPct}%`,
+                              height: `${heightPct}%`,
+                              padding: "8px",
+                            }}
                           >
-                            <div className="font-semibold">{evt.label ?? "Présence"}</div>
-                            <div className="text-[11px] text-slate-200/80">
-                              {new Date(evt.start).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })}{" "}
-                              -{" "}
-                              {new Date(evt.end).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })}
+                            <div
+                              className={[
+                                "h-full w-full rounded-2xl border px-3 py-2 text-xs shadow-lg",
+                                evt.is_incomplete
+                                  ? "border-amber-300/40 bg-amber-500/15 text-amber-100 shadow-amber-500/10"
+                                  : "border-indigo-400/40 bg-indigo-500/20 text-indigo-100 shadow-indigo-500/10",
+                              ].join(" ")}
+                            >
+                              <div className="font-semibold">{evt.label ?? "Présence"}</div>
+                              <div className="text-[11px] text-slate-200/80">
+                                {new Date(evt.start).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })}{" "}
+                                -{" "}
+                                {new Date(evt.end).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                {events.length === 0 && <div className="p-4 text-sm text-slate-400">Aucune présence sur cette semaine.</div>}
+                  {events.length === 0 && (
+                    <div className="p-4 text-sm text-slate-400">Aucune présence sur cette semaine.</div>
+                  )}
+                </div>
               </div>
             </div>
           )}
