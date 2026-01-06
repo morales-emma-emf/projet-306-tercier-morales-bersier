@@ -1,8 +1,8 @@
 const { startRFID, setOnTagCallback } = require("../Api/apiRFID.js");
 const lcdService = require("./serviceLCD.js");
 
-const SERVER_URL = "http://localhost:3000/api/badge-scan/porte";
-const READER_ID = 12;
+const SERVER_URL = "https://badge-elouan.vercel.app/api/badge-scan/porte";
+const READER_ID = 1;
 
 let lastTag = null;
 let lastTime = 0;
@@ -36,15 +36,15 @@ async function handleTag(tag) {
         console.log("Réponse serveur :", data);
 
         if (data.allowed) {
-                const msg = `Acces autorise`;
-                console.log(msg);
-                await lcdService.showMessage(msg);
-            
+            const msg = `Acces autorise`;
+            console.log(msg);
+            await lcdService.showMessage(msg);
+
         } else {
             console.log("Accès refusé");
             await lcdService.showMessage("Acces refuse");
         }
-        
+
 
     } catch (err) {
         console.error("Erreur serveur :", err.message);
