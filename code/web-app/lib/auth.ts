@@ -7,7 +7,12 @@ export async function login(userData: any) {
   const session = await signToken({ user: userData, expires });
 
   // Sauvegarder dans les cookies
-  (await cookies()).set("session", session, { expires, httpOnly: true });
+  (await cookies()).set("session", session, { 
+    expires, 
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+  });
 }
 
 export async function logout() {
