@@ -1,92 +1,112 @@
 #!/bin/bash
+set -e # Arrête le script dès qu'une erreur survient
 
 # ==========================================
-# Script d'installation automatique Porte Badge
+# Script d'installation automatique Porte Badge (Version PORTE)
 # ==========================================
 
-# Vérification des droits root pour les installations
+# Mode non-interactif pour apt
+export DEBIAN_FRONTEND=noninteractive
+
+# Vérification root
 if [ "$EUID" -ne 0 ]; then 
-  echo "Veuillez lancer ce script avec sudo :"
-  echo "sudo ./setup_raspi.sh"
-  exit
+  echo "ERREUR : Veuillez lancer ce script avec sudo."
+  exit 1
 fi
 
-# Récupération de l'utilisateur réel (pas root) pour les fichiers
+# Récupération utilisateur réel
 REAL_USER=${SUDO_USER:-$USER}
 USER_HOME=$(getent passwd $REAL_USER | cut -d: -f6)
 
 echo "--- Configuration pour l'utilisateur : $REAL_USER ---"
 
-# 1. Connexion au Wi-Fi
+# ==========================================
+# 0. Préparation et nettoyage des verrous APT
+# ==========================================
+echo "--- 0. Nettoyage des processus APT ---"
+# Désactivation temporaire des mises à jour auto qui bloquent l'installation
+systemctl stop unattended-upgrades 2>/dev/null || true
+# On tue tout processus apt qui pourrait bloquer
+pkill -f apt || true
+pkill -f unattended-upgr || true
+# Suppression des verrous potentiels
+rm -f /var/lib/apt/lists/lock
+rm -f /var/cache/apt/archives/lock
+rm -f /var/lib/dpkg/lock*
+dpkg --configure -a
+
+# ==========================================
+# 1. Configuration du Wi-Fi (Ubuntu Server)
+# ==========================================
 echo "--- 1. Configuration du Wi-Fi ---"
 
-# Installation de rfkill et iw pour gérer le blocage (soft block) et la région
-if ! command -v rfkill &> /dev/null; then
-    apt-get update && apt-get install -y rfkill iw network-manager
+if ! command -v nmcli &> /dev/null; then
+    apt-get update
+    apt-get install -y rfkill iw network-manager
 fi
 
-echo "Déblocage du Wi-Fi..."
-# Définir le code pays (obligatoire sur RPi pour activer le 5GHz et débloquer le Wi-Fi)
-echo "Configuration de la région Wi-Fi (CH)..."
-iw reg set CH 2>/dev/null || echo "Impossible de définir la région avec iw"
+# Configuration Netplan pour utiliser NetworkManager (Crucial pour Server)
+NETPLAN_CFG="/etc/netplan/01-network-manager-all.yaml"
+if [ ! -f "$NETPLAN_CFG" ]; then
+    echo "Configuration de Netplan..."
+    cat <<EOF > $NETPLAN_CFG
+network:
+  version: 2
+  renderer: NetworkManager
+EOF
+    chmod 600 $NETPLAN_CFG
+    netplan apply
+    sleep 5
+fi
 
-rfkill unblock wifi
-rfkill unblock all
-
-echo "Activation de l'interface wlan0..."
-ip link set wlan0 up
-nmcli radio wifi on
-
-# S'assurer que le service NetworkManager est démarré
+# Déblocage et Démarrage
+rfkill unblock wifi || true
+rfkill unblock all || true
+systemctl enable NetworkManager
 systemctl start NetworkManager
 sleep 5
 
-echo "Tentative de connexion au SSID : 7links..."
-# Essai avec nmcli avec priorité élevée
-nmcli dev wifi connect "7Links" password "#326IsBest#"
-if [ $? -eq 0 ]; then
-    echo "Wi-Fi connecté avec succès."
+echo "Connexion au Wi-Fi..."
+if nmcli connection show | grep -q "7Links"; then
+    echo "Déjà connecté."
 else
-    echo "Attention : La connexion Wi-Fi a échoué ou est déjà active."
+    nmcli dev wifi connect "7Links" password "#326IsBest#" || echo "Avertissement connexion (déjà actif ?)"
 fi
 
-# 2. Installation des prérequis système (git, curl, nodejs)
+# ==========================================
+# 2. Installation des prérequis
+# ==========================================
 echo "--- 2. Installation des prérequis ---"
 apt-get update
-apt-get install -y git curl
+apt-get install -y git curl build-essential
 
-# Installation de Node.js 20 (Lamesure de sécurité si pas installé)
 if ! command -v node &> /dev/null; then
     echo "Installation de Node.js 20..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
-else
-    echo "Node.js est déjà installé."
 fi
 
-# 3. Installation des pilotes Phidgets
-echo "--- 3. Installation des pilotes Phidgets ---"
-# Configuration du dépôt
-curl -fsSL https://www.phidgets.com/downloads/setup_linux | bash -
+# ==========================================
+# 3. Installation Phidgets
+# ==========================================
+echo "--- 3. Installation Phidgets ---"
+if [ ! -f /etc/apt/sources.list.d/phidgets.list ]; then
+    curl -fsSL https://www.phidgets.com/downloads/setup_linux | bash -
+fi
+apt-get install -y libphidget22 phidget22networkserver
 
-# Installation libphidget22
-apt-get install -y libphidget22
-
-# Installation Server Réseau
-apt-get install -y phidget22networkserver
-
-# Vérification service Phidget
 systemctl enable phidget22networkserver
 systemctl start phidget22networkserver
 
-echo "Pilotes Phidgets installés et service démarré."
-
+# ==========================================
 # 4. Clonage du projet
+# ==========================================
 echo "--- 4. Récupération du code ---"
 TARGET_DIR="$USER_HOME/projet-306-tercier-morales-bersier"
+chown $REAL_USER:$REAL_USER "$USER_HOME" # Sécurité permissions
 
 if [ -d "$TARGET_DIR" ]; then
-    echo "Le dossier existe déjà. Mise à jour..."
+    echo "Mise à jour du dossier existant..."
     cd "$TARGET_DIR"
     sudo -u $REAL_USER git pull
 else
@@ -94,18 +114,34 @@ else
     sudo -u $REAL_USER git clone https://github.com/morales-emma-emf/projet-306-tercier-morales-bersier.git "$TARGET_DIR"
 fi
 
-# 5. Installation des dépendances (Porte)
-echo "--- 5. Installation des modules NPM (Porte) ---"
+# ==========================================
+# 5. Installation NPM (Module PORTE)
+# ==========================================
+echo "--- 5. Installation NPM (Porte) ---"
 PROJECT_PATH="$TARGET_DIR/code/badge-service/Porte"
-cd "$PROJECT_PATH"
 
-# Installation en tant qu'utilisateur normal pour éviter les problèmes de droits root sur node_modules
+if [ ! -d "$PROJECT_PATH" ]; then
+    echo "ERREUR : Le dossier $PROJECT_PATH n'existe pas."
+    exit 1
+fi
+
+cd "$PROJECT_PATH"
 sudo -u $REAL_USER npm install
 
-# 6. Configuration de l'environnement (.env)
+# ==========================================
+# 6. Configuration interactives (.env)
+# ==========================================
 echo "--- 6. Configuration de la porte ---"
-echo "Veuillez entrer l'ID de cette porte (ex: porte_entree_1) :"
-read READER_ID < /dev/tty
+echo "----------------------------------------------------"
+echo " IMPORTANT : Configuration de l'identifiant "
+echo "----------------------------------------------------"
+
+# Boucle pour forcer une saisie non vide
+READER_ID=""
+while [ -z "$READER_ID" ]; do
+    echo -n "Veuillez entrer l'ID de cette porte (ex: porte_entree_1) : "
+    read READER_ID < /dev/tty
+done
 
 # Création du fichier .env
 cat <<EOF > "$PROJECT_PATH/.env"
@@ -113,40 +149,44 @@ READER_ID=$READER_ID
 SERVER_URL=https://badge-elouan.vercel.app/api/badge-scan/porte
 EOF
 
-# Attribution des droits à l'utilisateur
+# Correction des droits (car créé par root)
 chown $REAL_USER:$REAL_USER "$PROJECT_PATH/.env"
+chmod 600 "$PROJECT_PATH/.env"
 
-echo "Fichier .env créé avec READER_ID=$READER_ID"
+echo "Fichier .env configuré pour : $READER_ID"
 
-# 7. Création du service Systemd (Démarrage automatique)
-echo "--- 7. Création du service de démarrage automatique ---"
+# ==========================================
+# 7. Service Systemd
+# ==========================================
+echo "--- 7. Création du service ---"
 SERVICE_FILE="/etc/systemd/system/porte-service.service"
-NODE_PATH=$(which node)
+NODE_BIN=$(which node)
 
 cat <<EOF > $SERVICE_FILE
 [Unit]
-Description=Service Porte Badge RFID
-After=network.target phidget22networkserver.service
+Description=Service Porte Badge RFID (Porte)
+After=network.target network-online.target phidget22networkserver.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=$REAL_USER
 WorkingDirectory=$PROJECT_PATH
-ExecStart=$NODE_PATH server.js
+ExecStart=$NODE_BIN server.js
 Restart=always
+RestartSec=10
 Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-# Activation du service
 systemctl daemon-reload
 systemctl enable porte-service.service
-systemctl start porte-service.service
+systemctl restart porte-service.service
 
 echo "=============================================="
-echo "INSTALLATION TERMINÉE !"
-echo "Le service tourne en arrière-plan."
-echo "Pour voir les logs : journalctl -u porte-service -f"
+echo "INSTALLATION PORTE TERMINÉE !"
+echo "ID Configuré : $READER_ID"
+echo "Logs : journalctl -u porte-service -f"
 echo "=============================================="
