@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type LogItem = {
   pk_log: number;
@@ -63,7 +63,6 @@ function normalizeDateInput(value: string) {
 
 export default function AdminLogsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,13 +78,6 @@ export default function AdminLogsPage() {
   const [limit, setLimit] = useState<number>(50);
   const [page, setPage] = useState<number>(1);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-
-  useEffect(() => {
-    const userId = searchParams.get("userId");
-    if (userId) {
-      setSelectedUser(userId);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
