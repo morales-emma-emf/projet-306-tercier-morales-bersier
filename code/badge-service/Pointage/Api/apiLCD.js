@@ -39,8 +39,17 @@ async function displayMessage(message1, message2) {
         lcd.clear();
         await lcd.writeText(font, 0, 0, message1);
         await lcd.writeText(font, 1, 0, message2);
-
         await lcd.flush();
+
+        // Réinitialiser le message après 3 secondes
+        setTimeout(async () => {
+            try {
+                await lcd.clear();
+                await lcd.writeText(font, 0, 0, "scannez votre badge");
+                await lcd.flush();
+            } catch (e) { console.error("Erreur reset LCD:", e); }
+        }, 3000);
+
     } catch (err) {
         console.error("Erreur displayMessage:", err);
     }
