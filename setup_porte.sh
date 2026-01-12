@@ -3,6 +3,9 @@ set -e # Arrête le script dès qu'une erreur survient
 
 # ==========================================
 # Script d'installation automatique Porte Badge (Version PORTE)
+# sed -i 's/\r$//' setup_porte.sh
+# chmod +x setup_porte.sh 
+# sudo bash ./setup_porte.sh 
 # ==========================================
 
 # Mode non-interactif pour apt

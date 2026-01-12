@@ -40,6 +40,7 @@ type DoorForm = {
   pk_porte: number | null;
   titre: string;
   description: string;
+  porteId: string;
 };
 
 type RoleForm = {
@@ -132,7 +133,7 @@ export default function DashboardPage() {
   const [roleSelection, setRoleSelection] = useState<number | null>(null);
   const [doorsModalOpen, setDoorsModalOpen] = useState(false);
   const [rolesModalOpen, setRolesModalOpen] = useState(false);
-  const [doorForm, setDoorForm] = useState<DoorForm>({ pk_porte: null, titre: "", description: "" });
+  const [doorForm, setDoorForm] = useState<DoorForm>({ pk_porte: null, titre: "", description: "", porteId: "" });
   const [roleForm, setRoleForm] = useState<RoleForm>({ pk_role: null, nom_role: "" });
   const [doorError, setDoorError] = useState<string | null>(null);
   const [roleError, setRoleError] = useState<string | null>(null);
@@ -443,33 +444,44 @@ export default function DashboardPage() {
       setDoorError("Le titre est requis");
       return;
     }
+    if (!doorForm.pk_porte && !doorForm.porteId.trim()) {
+      setDoorError("L'ID de porte est requis");
+      return;
+    }
     setDoorSaving(true);
     setDoorError(null);
     try {
+      const titre = doorForm.titre.trim();
+      const description = doorForm.description.trim();
       if (doorForm.pk_porte) {
         const res = await fetch("/api/admin/portes", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             pk_porte: doorForm.pk_porte,
-            titre: doorForm.titre,
-            description: doorForm.description || null,
+            titre,
+            description: description || null,
           }),
         });
         if (!res.ok) throw new Error(await res.text());
       } else {
+        const inputId = Number(doorForm.porteId);
+        if (Number.isNaN(inputId)) {
+          throw new Error("L'ID de porte est invalide");
+        }
         const res = await fetch("/api/admin/portes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            titre: doorForm.titre,
-            description: doorForm.description || null,
+            pk_porte: inputId,
+            titre,
+            description: description || null,
           }),
         });
         if (!res.ok) throw new Error(await res.text());
       }
       await loadPortes();
-      setDoorForm({ pk_porte: null, titre: "", description: "" });
+      setDoorForm({ pk_porte: null, titre: "", description: "", porteId: "" });
     } catch (err: any) {
       setDoorError(err.message || "Erreur lors de l'enregistrement de la porte");
     } finally {
@@ -929,7 +941,7 @@ export default function DashboardPage() {
                 className="rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-200 transition hover:bg-slate-800"
                 onClick={() => {
                   setDoorsModalOpen(false);
-                  setDoorForm({ pk_porte: null, titre: "", description: "" });
+                  setDoorForm({ pk_porte: null, titre: "", description: "", porteId: "" });
                   setDoorError(null);
                 }}
               >
@@ -963,7 +975,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2">
                         <button
                           className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-200 transition hover:bg-slate-800"
-                          onClick={() => setDoorForm({ pk_porte: porte.pk_porte, titre: porte.titre, description: porte.description || "" })}
+                          onClick={() => setDoorForm({ pk_porte: porte.pk_porte, titre: porte.titre, description: porte.description || "", porteId: String(porte.pk_porte) })}
                         >
                           Éditer
                         </button>
@@ -993,6 +1005,14 @@ export default function DashboardPage() {
                     placeholder="Titre"
                     className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30"
                   />
+                  <input
+                    type="number"
+                    value={doorForm.pk_porte ? String(doorForm.pk_porte) : doorForm.porteId}
+                    onChange={(e) => setDoorForm((p) => ({ ...p, porteId: e.target.value }))}
+                    placeholder="ID de porte (obligatoire)"
+                    disabled={Boolean(doorForm.pk_porte)}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30"
+                  />
                   <textarea
                     value={doorForm.description}
                     onChange={(e) => setDoorForm((p) => ({ ...p, description: e.target.value }))}
@@ -1002,7 +1022,7 @@ export default function DashboardPage() {
                   <div className="flex justify-end gap-2">
                     <button
                       className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
-                      onClick={() => setDoorForm({ pk_porte: null, titre: "", description: "" })}
+                      onClick={() => setDoorForm({ pk_porte: null, titre: "", description: "", porteId: "" })}
                       disabled={doorSaving}
                     >
                       Réinitialiser

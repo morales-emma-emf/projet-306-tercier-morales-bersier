@@ -3,6 +3,9 @@ set -e # Arrête le script immédiatement si une commande échoue
 
 # ==========================================
 # Script d'installation automatique Porte Badge
+# sed -i 's/\r$//' setup_pointage.sh
+# chmod +x setup_pointage.sh 
+# sudo bash ./setup_pointage.sh 
 # ==========================================
 
 # Éviter les pop-ups interactifs lors des apt-get install
