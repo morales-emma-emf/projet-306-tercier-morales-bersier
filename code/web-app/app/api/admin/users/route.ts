@@ -126,7 +126,18 @@ export async function DELETE(req: Request) {
   }
 
   try {
+    // 1. Délier les logs (pour conserver l'historique anonyme)
+    await db.query("UPDATE t_logs SET fk_utilisateur = NULL WHERE fk_utilisateur = ?", [id]);
+
+    // 2. Supprimer les données dépendantes (Pointages, Salaires)
+    await db.query("DELETE FROM t_pointage WHERE fk_utilisateur = ?", [id]);
+    await db.query("DELETE FROM t_salaire WHERE fk_utilisateur = ?", [id]);
+
+    // Note: tr_utilisateur_porte est supprimé automatiquement (ON DELETE CASCADE)
+
+    // 3. Supprimer l'utilisateur
     await db.query("DELETE FROM t_utilisateur WHERE pk_utilisateur = ?", [id]);
+    
     return NextResponse.json({ message: "Utilisateur supprimé avec succès" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

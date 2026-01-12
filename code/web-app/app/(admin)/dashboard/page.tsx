@@ -694,6 +694,28 @@ export default function DashboardPage() {
     }
   };
 
+  const handleUserDelete = async () => {
+    if (!selectedUser) return;
+    if (!confirm("Voulez-vous vraiment supprimer cet utilisateur ? Cette action est irréversible.")) return;
+
+    setUserEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users?id=${selectedUser.pk_utilisateur}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setUsers((prev) => prev.filter((u) => u.pk_utilisateur !== selectedUser.pk_utilisateur));
+      setSelectedUser(null);
+      setShowUserEditForm(false);
+    } catch (err: any) {
+      alert(err.message || "Erreur lors de la suppression");
+    } finally {
+      setUserEditSaving(false);
+    }
+  };
+
 
 
   return (
@@ -1280,6 +1302,12 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <button
+                  className="rounded-lg border border-red-500/60 px-3 py-2 text-xs font-semibold text-red-200 transition hover:bg-red-600 hover:text-white"
+                  onClick={handleUserDelete}
+                >
+                  Supprimer
+                </button>
 
                 <button
                   className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-800"

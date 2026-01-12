@@ -101,43 +101,63 @@ export default function AdminLogsPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
+    
+    // Fonction interne pour fetch les logs
+    const fetchLogs = (isBackground = false) => {
+      if (!isBackground) {
+        setLoading(true);
+        setError(null);
+      }
 
-    const params = new URLSearchParams();
-    params.set("limit", String(limit));
-    params.set("offset", String((page - 1) * limit));
-    if (selectedUser) params.set("fk_utilisateur", selectedUser);
-    if (selectedPorte) params.set("fk_porte", selectedPorte);
-    if (eventType) params.set("event_type", eventType);
-    if (dateStart) params.set("date_start", normalizeDateInput(dateStart));
-    if (dateEnd) params.set("date_end", normalizeDateInput(dateEnd));
+      const params = new URLSearchParams();
+      params.set("limit", String(limit));
+      params.set("offset", String((page - 1) * limit));
+      if (selectedUser) params.set("fk_utilisateur", selectedUser);
+      if (selectedPorte) params.set("fk_porte", selectedPorte);
+      if (eventType) params.set("event_type", eventType);
+      if (dateStart) params.set("date_start", normalizeDateInput(dateStart));
+      if (dateEnd) params.set("date_end", normalizeDateInput(dateEnd));
 
-    fetch(`/api/admin/logs?${params.toString()}`, { cache: "no-store" })
-      .then(async (res) => {
-        if (!active) return;
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "Erreur lors du chargement des logs");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (!active) return;
-        setLogs(data.data || []);
-        setPagination(data.pagination || null);
-      })
-      .catch((err: any) => {
-        if (!active) return;
-        setError(err.message || "Erreur lors du chargement des logs");
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
+      fetch(`/api/admin/logs?${params.toString()}`, { cache: "no-store" })
+        .then(async (res) => {
+          if (!active) return;
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || "Erreur lors du chargement des logs");
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (!active) return;
+          setLogs(data.data || []);
+          setPagination(data.pagination || null);
+        })
+        .catch((err: any) => {
+          if (!active) return;
+          // Pour éviter de bloquer l'UI sur une erreur passagère en background, on set l'erreur surtout au premier load
+          if (!isBackground) {
+            setError(err.message || "Erreur lors du chargement des logs");
+          } else {
+             console.error("Erreur refresh background:", err);
+          }
+        })
+        .finally(() => {
+          if (!active) return;
+          if (!isBackground) setLoading(false);
+        });
+    };
+
+    // Chargement initial
+    fetchLogs(false);
+
+    // Rafraîchissement automatique toutes les 2 secondes
+    const interval = setInterval(() => {
+      fetchLogs(true);
+    }, 2000);
 
     return () => {
       active = false;
+      clearInterval(interval);
     };
   }, [selectedUser, selectedPorte, eventType, dateStart, dateEnd, limit, page]);
 
