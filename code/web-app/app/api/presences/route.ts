@@ -1,76 +1,82 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/auth";
 
-async function getUserFromSession() {
-  const session = await getSession();
-  if (!session || typeof session !== "object" || !("user" in session)) return null;
-  return (session as any).user;
+function mysqlDateTime(d: Date) {
+  return d.toISOString().slice(0, 19).replace("T", " ");
+}
+
+function autoEnd19hMysql(heureEntree: string) {
+  const d = new Date(heureEntree);
+  const auto = new Date(d);
+  auto.setHours(20, 0, 0, 0);
+  return mysqlDateTime(auto);
 }
 
 export async function GET(req: Request) {
-  const user = await getUserFromSession();
-  if (!user) {
-    return NextResponse.json({ message: "Non authentifié" }, { status: 401 });
-  }
-
-  const isAdmin = user.fk_role === 1;
-
-  const { searchParams } = new URL(req.url);
-  const requestedUserId = searchParams.get("userid");     // <- query param
-  const start_date = searchParams.get("start_date");      // ISO ou "YYYY-MM-DD"
-  const end_date = searchParams.get("end_date");          // ISO ou "YYYY-MM-DD"
-
-  // ✅ userId effectif
-  const effectiveUserId = isAdmin && requestedUserId ? Number(requestedUserId) : Number(user.pk_utilisateur);
-
-  if (!effectiveUserId || Number.isNaN(effectiveUserId)) {
-    return NextResponse.json({ message: "userid invalide" }, { status: 400 });
-  }
-
   try {
-    let query = `
+    const { searchParams } = new URL(req.url);
+    const userId = Number(searchParams.get("userid"));
+    const startDate = searchParams.get("start_date");
+    const endDate = searchParams.get("end_date");
+
+    if (!userId || !startDate || !endDate) {
+      return NextResponse.json({ message: "Params manquants" }, { status: 400 });
+    }
+
+    
+    const cookie = (await cookies()).get("session");
+    const payload = cookie ? await decrypt(cookie.value) : null;
+    const sessionUser = (payload as any)?.user;
+
+    if (!sessionUser) {
+      return NextResponse.json({ message: "Non authentifié" }, { status: 401 });
+    }
+
+    const isAdmin = Number(sessionUser.fk_role) === 1;
+    const isOwner = Number(sessionUser.pk_utilisateur) === Number(userId);
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ message: "Accès refusé" }, { status: 403 });
+    }
+
+  
+    const [rows]: any = await db.query(
+      `
       SELECT 
         p.pk_pointage,
-        p.fk_utilisateur,
-        p.date_pointage,
         p.heure_entree,
         p.heure_sortie,
-        p.duree_minutes,
         u.prenom,
         u.nom
       FROM t_pointage p
-      JOIN t_utilisateur u ON p.fk_utilisateur = u.pk_utilisateur
+      JOIN t_utilisateur u ON u.pk_utilisateur = p.fk_utilisateur
       WHERE p.fk_utilisateur = ?
-    `;
-    const params: any[] = [effectiveUserId];
+        AND p.heure_entree >= ?
+        AND p.heure_entree < ?
+      ORDER BY p.heure_entree ASC
+      `,
+      [userId, mysqlDateTime(new Date(startDate)), mysqlDateTime(new Date(endDate))]
+    );
 
-    if (start_date) {
-      query += " AND p.heure_entree >= ?";
-      params.push(start_date);
-    }
+    const events = (rows || []).map((r: any) => {
+      const incomplete = !r.heure_sortie;
+      const end = r.heure_sortie ?? autoEnd19hMysql(r.heure_entree);
 
-    if (end_date) {
-      const endDate = end_date.includes(" ") ? end_date : `${end_date} 23:59:59`;
-      query += " AND p.heure_entree <= ?";
-      params.push(endDate);
-    }
-
-    query += " ORDER BY p.heure_entree ASC";
-
-    const [rows] = (await db.query(query, params)) as any;
-
-    const events = rows.map((p: any) => ({
-      id: p.pk_pointage,
-      start: new Date(p.heure_entree).toISOString(),
-      end: p.heure_sortie ? new Date(p.heure_sortie).toISOString() : new Date(p.heure_entree).toISOString(),
-      label: p.heure_sortie ? "Présent" : "⚠️ Incomplet",
-      is_incomplete: !p.heure_sortie,
-      user: { prenom: p.prenom, nom: p.nom },
-    }));
+      return {
+        id: r.pk_pointage,
+        start: r.heure_entree,
+        end,
+        is_incomplete: incomplete,
+        label: incomplete ? "Sortie manquante" : "Présence",
+        user: { prenom: r.prenom, nom: r.nom },
+        end_is_auto: incomplete,
+      };
+    });
 
     return NextResponse.json({ events });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (e) {
+    console.error("PRESENCES GET ERROR:", e);
+    return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
 }

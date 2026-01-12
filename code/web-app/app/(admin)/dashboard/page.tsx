@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PresenceModal from "@/components/public/presence";
 
+
+
+
 type User = {
   pk_utilisateur: number;
   email: string;
@@ -173,15 +176,21 @@ export default function DashboardPage() {
   const [pointageError, setPointageError] = useState<string | null>(null);
   const [pointageSuccess, setPointageSuccess] = useState<string | null>(null);
 
+  const [salaryMap, setSalaryMap] = useState<Record<number, { total_minutes: number; salaire_mois: number }>>({});
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([fetchUsers(), fetchRoles()])
-      .then(([usersData, rolesData]) => {
+    Promise.all([
+      fetchUsers(),
+      fetchRoles(),
+      fetch("/api/admin/salaire", { cache: "no-store" }).then((r) => r.json()),
+    ])
+      .then(([usersData, rolesData, salaryData]) => {
         if (!active) return;
         setUsers(usersData);
         setRoles(rolesData);
+        setSalaryMap(salaryData || {});
         setError(null);
       })
       .catch((err) => {
@@ -197,6 +206,7 @@ export default function DashboardPage() {
       active = false;
     };
   }, []);
+
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -382,6 +392,36 @@ export default function DashboardPage() {
       setPointageError("L'heure d'entrée est obligatoire.");
       return;
     }
+   
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const entreeLocal = new Date(pointageForm.heure_entree); // datetime-local -> local time
+    if (Number.isNaN(entreeLocal.getTime())) {
+      setPointageError("Date/heure d'entrée invalide.");
+      return;
+    }
+    if (entreeLocal >= startOfToday) {
+      setPointageError("Tu peux ajouter des heures uniquement jusqu'à hier (pas aujourd'hui ni dans le futur).");
+      return;
+    }
+
+    if (pointageForm.heure_sortie) {
+      const sortieLocal = new Date(pointageForm.heure_sortie);
+      if (Number.isNaN(sortieLocal.getTime())) {
+        setPointageError("Date/heure de sortie invalide.");
+        return;
+      }
+      if (sortieLocal >= startOfToday) {
+        setPointageError("La sortie doit être au plus tard hier (pas aujourd'hui ni dans le futur).");
+        return;
+      }
+      if (sortieLocal < entreeLocal) {
+        setPointageError("L'heure de sortie ne peut pas être avant l'heure d'entrée.");
+        return;
+      }
+    }
+
 
     setPointageSaving(true);
     try {
@@ -414,9 +454,8 @@ export default function DashboardPage() {
 
       setPointageSuccess("Pointage ajouté ");
       setPointageForm({ heure_entree: "", heure_sortie: "" });
+      await loadSalary();
 
-      // optionnel: ouvrir direct la modal des présences
-      // handlePresence(selectedUser.pk_utilisateur);
     } catch (e: any) {
       setPointageError(e?.message || "Erreur inconnue");
     } finally {
@@ -437,6 +476,11 @@ export default function DashboardPage() {
   const loadUsers = async () => {
     const data = await fetchUsers();
     setUsers(data);
+  };
+
+  const loadSalary = async () => {
+    const data = await fetch("/api/admin/salaire", { cache: "no-store" }).then((r) => r.json());
+    setSalaryMap(data || {});
   };
 
   const handleDoorSubmit = async () => {
@@ -581,6 +625,12 @@ export default function DashboardPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => { });
+    router.push("/login");
+  };
+
+
   const resetUserForm = () => {
     setUserForm({
       email: "",
@@ -724,9 +774,20 @@ export default function DashboardPage() {
         <header className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.15em] text-slate-500">Administration</p>
+
+
             <h1 className="text-3xl font-semibold text-white">Tableau de bord</h1>
             <p className="text-sm text-slate-400">Vue rapide des collaborateurs et actions fréquentes.</p>
           </div>
+          <div className="flex gap-2">
+            <button
+              className="rounded-xl border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-600 hover:text-white"
+              onClick={handleLogout}
+            >
+              Déconnexion
+            </button>
+          </div>
+
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
@@ -822,6 +883,10 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-semibold text-white">{user.prenom} {user.nom}</p>
                         <p className="text-xs text-slate-400">Badge: {user.id_badge || "—"}</p>
+                        <p className="text-xs text-slate-400">
+                          Salaire (mois): {salaryMap[user.pk_utilisateur]?.salaire_mois?.toFixed(2) ?? "0.00"} CHF
+                        </p>
+
                       </div>
                       <div className="truncate text-slate-300">{user.email}</div>
                       <div>
@@ -1232,68 +1297,15 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-800/40 px-4 py-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white">Ajouter un pointage</p>
-                  <p className="text-xs text-slate-400">Saisir une entrée et (optionnel) une sortie.</p>
-                </div>
-              </div>
-
-              {pointageError && <p className="mb-2 text-xs text-red-300">{pointageError}</p>}
-              {pointageSuccess && <p className="mb-2 text-xs text-emerald-300">{pointageSuccess}</p>}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Heure d'entrée *</label>
-                  <input
-                    type="datetime-local"
-                    value={pointageForm.heure_entree}
-                    onChange={(e) => setPointageForm((p) => ({ ...p, heure_entree: e.target.value }))}
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Heure de sortie (optionnel)</label>
-                  <input
-                    type="datetime-local"
-                    value={pointageForm.heure_sortie}
-                    onChange={(e) => setPointageForm((p) => ({ ...p, heure_sortie: e.target.value }))}
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-60"
-                  onClick={() => {
-                    setPointageForm({ heure_entree: "", heure_sortie: "" });
-                    setPointageError(null);
-                    setPointageSuccess(null);
-                  }}
-                  disabled={pointageSaving}
-                >
-                  Réinitialiser
-                </button>
-
-                <button
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
-                  onClick={handleAddPointage}
-                  disabled={pointageSaving}
-                >
-                  {pointageSaving ? "Ajout…" : "Ajouter"}
-                </button>
-              </div>
-            </div>
-
 
             <div className="grid gap-3 text-sm text-slate-200">
               <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
                 <span className="text-slate-400">Badge</span>
                 <span className="font-semibold text-white">{selectedUser.id_badge || "—"}</span>
+
+
               </div>
+
               <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
                 <span className="text-slate-400">Rôle</span>
                 <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-100">
@@ -1493,6 +1505,7 @@ export default function DashboardPage() {
         }}
         userId={presenceUserId}
         title="Planning de présence"
+        canAddPointage={true}
       />
 
     </main>
