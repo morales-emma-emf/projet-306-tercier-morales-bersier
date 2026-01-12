@@ -18,8 +18,8 @@ export async function POST(req: Request) {
     const [userRows] = (await db.query("SELECT * FROM t_utilisateur WHERE id_badge = ?", [badgeId])) as any;
     const user = Array.isArray(userRows) && userRows.length > 0 ? userRows[0] : null;
     if (!user) {
-      const action = `Tentative de badge inconnu : ${badgeId}`;
-      await db.query("INSERT INTO t_logs (action, event_type, date_action) VALUES (?, ?, ?)", [action, "error", timestamp]);
+      const action = `Tentative de badge inconnu : ${badgeId} sur porte ${porteId}`;
+      await db.query("INSERT INTO t_logs (action, event_type, date_action, fk_porte) VALUES (?, ?, ?, ?)", [action, "error", timestamp, porteId]);
       return NextResponse.json({ allowed: false, reason: "UNKNOWN_BADGE" });
     }
 
