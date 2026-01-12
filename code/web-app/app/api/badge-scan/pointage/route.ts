@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const user = Array.isArray(userRows) && userRows.length > 0 ? userRows[0] : null;
 
     if (!user) {
-      const action = `Tentative de badge inconnu : ${badgeId}`;
+      const action = `Tentative de badge inconnu : ${badgeId} au pointage`;
       await db.query(
         "INSERT INTO t_logs (action, event_type, date_action) VALUES (?, ?, ?)",
         [action, "error", serverTimestamp]

@@ -31,9 +31,17 @@ export async function GET(req: Request) {
       return NextResponse.json(users[0]);
     }
 
-    const [users] = (await db.query("SELECT * FROM t_utilisateur")) as any;
+    // On ne retourne que les utilisateurs actifs (non supprimés)
+    // Note: La colonne est_actif doit avoir été ajoutée à la base de données.
+    // Si elle n'existe pas, cette requête échouera. Assurez-vous d'avoir joué le script de migration.
+    const [users] = (await db.query("SELECT * FROM t_utilisateur WHERE est_actif = 1")) as any;
     return NextResponse.json(users);
   } catch (error: any) {
+    // Fallback: si la colonne est_actif n'existe pas encore, on renvoie tout
+    if (error.code === 'ER_BAD_FIELD_ERROR') {
+        const [users] = (await db.query("SELECT * FROM t_utilisateur")) as any;
+        return NextResponse.json(users);
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -126,9 +134,36 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    await db.query("DELETE FROM t_utilisateur WHERE pk_utilisateur = ?", [id]);
-    return NextResponse.json({ message: "Utilisateur supprimé avec succès" });
+    // Soft Delete : On désactive l'utilisateur et on libère email/badge pour réutilisation future
+    // On renomme pour éviter les conflits UNIQUE et désactiver login/badge
+    await db.query(
+      `UPDATE t_utilisateur 
+       SET est_actif = 0, 
+           email = CONCAT('_DEL_', pk_utilisateur, '_', email), 
+           id_badge = CONCAT('_DEL_', pk_utilisateur, '_', LEFT(id_badge, 30))
+       WHERE pk_utilisateur = ?`, 
+      [id]
+    );
+
+    // Suppression des données personelles mais conservation des logs
+    await db.query("DELETE FROM t_pointage WHERE fk_utilisateur = ?", [id]);
+    await db.query("DELETE FROM t_salaire WHERE fk_utilisateur = ?", [id]);
+    
+    return NextResponse.json({ message: "Utilisateur supprimé (archivé) avec succès" });
   } catch (error: any) {
+    // Si la colonne n'existe pas, on tente le hard delete (comportement précédent mais attention aux logs)
+    if (error.code === 'ER_BAD_FIELD_ERROR') {
+       try {
+         // Délier les logs avant suppression
+         await db.query("UPDATE t_logs SET fk_utilisateur = NULL WHERE fk_utilisateur = ?", [id]);
+         await db.query("DELETE FROM t_pointage WHERE fk_utilisateur = ?", [id]);
+         await db.query("DELETE FROM t_salaire WHERE fk_utilisateur = ?", [id]);
+         await db.query("DELETE FROM t_utilisateur WHERE pk_utilisateur = ?", [id]);
+         return NextResponse.json({ message: "Utilisateur supprimé (défintivement) avec succès" });
+       } catch (e: any) {
+         return NextResponse.json({ error: e.message }, { status: 500 });
+       }
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
