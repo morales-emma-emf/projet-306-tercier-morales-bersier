@@ -27,7 +27,7 @@ export default function LoginPage() {
     if (Number(data.user.fk_role) === 1) {
       router.push("/dashboard");
     } else {
-      alert("Accès réservé aux administrateurs");
+      router.push("/users");
     }
   }
 
