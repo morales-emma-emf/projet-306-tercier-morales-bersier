@@ -1,23 +1,14 @@
-async function getUsers() {
-  // In a real app, use absolute URL or fetch from DB directly in server component
-  // For now, we'll mock or assume the API is reachable if running
-  // const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/users`, { cache: "no-store" });
-  // return res.json();
-  return [];
-}
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { decrypt } from "@/lib/auth";
+import UsersClient from "../../(users)/users-client";
 
 export default async function UsersPage() {
-  const users = await getUsers();
+  const cookie = (await cookies()).get("session");
+  const payload = cookie ? await decrypt(cookie.value) : null;
 
-  return (
-    <main style={{ padding: "2rem" }}>
-      <h1>Gestion des Utilisateurs</h1>
-      <ul>
-        {users.map((u: any) => (
-          <li key={u.id}>{u.name} – {u.badge_id}</li>
-        ))}
-      </ul>
-      {users.length === 0 && <p>Aucun utilisateur trouvé (ou API non connectée).</p>}
-    </main>
-  );
+  const user = (payload as any)?.user;
+  if (!user) redirect("/login");
+
+  return <UsersClient user={user} />;
 }

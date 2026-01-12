@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/auth";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-/**
- * Convertit une date (datetime-local OU ISO) en "YYYY-MM-DD HH:mm:ss"
- * en heure LOCALE (adapté à MySQL DATETIME).
- */
 function toMysqlDatetime(input: string) {
   const d = new Date(input);
   if (Number.isNaN(d.getTime())) throw new Error("Date invalide");
@@ -33,6 +31,18 @@ function diffMinutes(startRaw: string, endRaw: string) {
 
 export async function POST(req: Request) {
   try {
+    
+    const cookie = (await cookies()).get("session");
+    const payload = cookie ? await decrypt(cookie.value) : null;
+    const sessionUser = (payload as any)?.user;
+
+    if (!sessionUser) {
+      return NextResponse.json({ message: "Non authentifié" }, { status: 401 });
+    }
+    if (Number(sessionUser.fk_role) !== 1) {
+      return NextResponse.json({ message: "Admin uniquement" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     const fk_utilisateur = Number(body?.fk_utilisateur);
@@ -47,11 +57,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "heure_entree est obligatoire" }, { status: 400 });
     }
 
-  
     const heure_entree = toMysqlDatetime(String(heure_entree_raw));
     const heure_sortie = heure_sortie_raw ? toMysqlDatetime(String(heure_sortie_raw)) : null;
 
-    
     if (heure_sortie_raw) {
       const s = new Date(String(heure_entree_raw)).getTime();
       const e = new Date(String(heure_sortie_raw)).getTime();
@@ -63,13 +71,39 @@ export async function POST(req: Request) {
       }
     }
 
-    // -> on met la même valeur que heure_entree (simple + cohérent 
     const date_pointage = heure_entree;
-
     const duree_minutes =
       heure_sortie_raw ? diffMinutes(String(heure_entree_raw), String(heure_sortie_raw)) : null;
 
+
+
+    const day = heure_entree.slice(0, 10);
+    const endFallback = `${day} 20:00:00`;
+
+    const newStart = heure_entree;
+    const newEnd = heure_sortie ?? endFallback;
+
+    const [overlaps]: any = await db.query(
+      `
+  SELECT pk_pointage
+  FROM t_pointage
+  WHERE fk_utilisateur = ?
+    AND heure_entree < ?
+    AND COALESCE(heure_sortie, ?) > ?
+  LIMIT 1
+  `,
+      [fk_utilisateur, newEnd, endFallback, newStart]
+    );
+
+    if (overlaps?.length) {
+      return NextResponse.json(
+        { message: "Chevauchement détecté : ce créneau se superpose à un autre pointage." },
+        { status: 409 }
+      );
+    }
+
     await db.query(
+
       `INSERT INTO t_pointage (fk_utilisateur, date_pointage, heure_entree, heure_sortie, duree_minutes)
        VALUES (?, ?, ?, ?, ?)`,
       [fk_utilisateur, date_pointage, heure_entree, heure_sortie, duree_minutes]

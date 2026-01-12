@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
-import { login } from "@/lib/auth"; 
+import { login } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       prenom: user.prenom,
       nom: user.nom,
       fk_role: user.fk_role,
+      id_badge: user.id_badge,
+      taux_horaire: user.taux_horaire,
     };
 
 
