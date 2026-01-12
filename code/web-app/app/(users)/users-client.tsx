@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PresenceModal from "@/components/public/presence";
 
@@ -18,6 +18,27 @@ export default function UsersClient({ user }: { user: SessionUser }) {
     const router = useRouter();
     const [presenceOpen, setPresenceOpen] = useState(false);
 
+    const [salary, setSalary] = useState<{ total_minutes: number; salaire_mois: number } | null>(null);
+
+    useEffect(() => {
+        let active = true;
+
+        fetch("/api/admin/salaire", { cache: "no-store" })
+            .then((r) => r.json())
+            .then((data) => {
+                if (!active) return;
+                setSalary(data?.[user.pk_utilisateur] ?? { total_minutes: 0, salaire_mois: 0 });
+            })
+            .catch(() => {
+                if (!active) return;
+                setSalary({ total_minutes: 0, salaire_mois: 0 });
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [user.pk_utilisateur]);
+
     const roleLabel = useMemo(() => {
         if (Number(user.fk_role) === 1) return "Admin";
         return "Employé";
@@ -29,7 +50,6 @@ export default function UsersClient({ user }: { user: SessionUser }) {
     }, [user]);
 
     const handleLogout = async () => {
-
         await fetch("/api/auth/logout", { method: "POST" }).catch(() => { });
         router.push("/login");
     };
@@ -85,8 +105,16 @@ export default function UsersClient({ user }: { user: SessionUser }) {
 
                             <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
                                 <span className="text-slate-400">Taux horaire</span>
+                                <span className="font-semibold text-white">{(user as any).taux_horaire ?? "—"}</span>
+                            </div>
+
+
+
+                            <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
+                            
+                                <span className="text-slate-400">Salaire (mois)</span>
                                 <span className="font-semibold text-white">
-                                    {(user as any).taux_horaire ?? "—"}
+                                    {salary ? `${salary.salaire_mois.toFixed(2)} CHF` : "…"}
                                 </span>
                             </div>
                         </div>
@@ -96,22 +124,19 @@ export default function UsersClient({ user }: { user: SessionUser }) {
                     <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-black/30 backdrop-blur">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Présences</p>
                         <h2 className="mt-2 text-xl font-semibold text-white">Mon planning</h2>
-                        <p className="text-sm text-slate-400">
-                            Tableau présence
-                        </p>
+                        <p className="text-sm text-slate-400">Tableau présence</p>
 
                         <div className="mt-6 flex flex-col gap-3">
                             <button
                                 className="rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                                onClick={() => setPresenceOpen(true)}>
+                                onClick={() => setPresenceOpen(true)}
+                            >
                                 Voir mes présences
                             </button>
-
                         </div>
                     </div>
                 </div>
             </section>
-
 
             <PresenceModal
                 open={presenceOpen}
@@ -120,8 +145,6 @@ export default function UsersClient({ user }: { user: SessionUser }) {
                 title="Planning de présence"
                 canAddPointage={Number(user.fk_role) === 1}
             />
-
         </main>
     );
 }
-

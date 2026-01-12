@@ -29,9 +29,26 @@ function diffMinutes(startRaw: string, endRaw: string) {
   return minutes >= 0 ? minutes : null;
 }
 
+function todayYMDInZurich() {
+  
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Zurich",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(new Date()); // ex: "2026-01-12"
+}
+
+function ymdFromISO(iso: string) {
+ 
+  return iso.slice(0, 10);
+}
+
+
 export async function POST(req: Request) {
   try {
-    
+
     const cookie = (await cookies()).get("session");
     const payload = cookie ? await decrypt(cookie.value) : null;
     const sessionUser = (payload as any)?.user;
@@ -82,6 +99,41 @@ export async function POST(req: Request) {
 
     const newStart = heure_entree;
     const newEnd = heure_sortie ?? endFallback;
+
+    const todayYMD = todayYMDInZurich();
+
+    if (!body?.heure_entree) {
+      return NextResponse.json({ message: "heure_entree requise" }, { status: 400 });
+    }
+
+    const entreeYMD = ymdFromISO(body.heure_entree);
+    if (entreeYMD >= todayYMD) {
+      return NextResponse.json(
+        { message: "Interdit : pointage uniquement jusqu'à hier (pas aujourd'hui ni futur)." },
+        { status: 400 }
+      );
+    }
+
+    if (body.heure_sortie) {
+      const sortieYMD = ymdFromISO(body.heure_sortie);
+      if (sortieYMD >= todayYMD) {
+        return NextResponse.json(
+          { message: "Interdit : heure_sortie uniquement jusqu'à hier (pas aujourd'hui ni futur)." },
+          { status: 400 }
+        );
+      }
+
+    
+      const entree = new Date(body.heure_entree).getTime();
+      const sortie = new Date(body.heure_sortie).getTime();
+      if (!Number.isFinite(entree) || !Number.isFinite(sortie) || sortie < entree) {
+        return NextResponse.json(
+          { message: "heure_sortie invalide (doit être après heure_entree)." },
+          { status: 400 }
+        );
+      }
+    }
+
 
     const [overlaps]: any = await db.query(
       `

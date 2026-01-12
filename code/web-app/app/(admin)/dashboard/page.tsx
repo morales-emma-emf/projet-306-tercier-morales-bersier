@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PresenceModal from "@/components/public/presence";
 
+
+
+
 type User = {
   pk_utilisateur: number;
   email: string;
@@ -173,15 +176,21 @@ export default function DashboardPage() {
   const [pointageError, setPointageError] = useState<string | null>(null);
   const [pointageSuccess, setPointageSuccess] = useState<string | null>(null);
 
+  const [salaryMap, setSalaryMap] = useState<Record<number, { total_minutes: number; salaire_mois: number }>>({});
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([fetchUsers(), fetchRoles()])
-      .then(([usersData, rolesData]) => {
+    Promise.all([
+      fetchUsers(),
+      fetchRoles(),
+      fetch("/api/admin/salaire", { cache: "no-store" }).then((r) => r.json()),
+    ])
+      .then(([usersData, rolesData, salaryData]) => {
         if (!active) return;
         setUsers(usersData);
         setRoles(rolesData);
+        setSalaryMap(salaryData || {});
         setError(null);
       })
       .catch((err) => {
@@ -197,6 +206,7 @@ export default function DashboardPage() {
       active = false;
     };
   }, []);
+
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -382,6 +392,36 @@ export default function DashboardPage() {
       setPointageError("L'heure d'entrée est obligatoire.");
       return;
     }
+   
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const entreeLocal = new Date(pointageForm.heure_entree); // datetime-local -> local time
+    if (Number.isNaN(entreeLocal.getTime())) {
+      setPointageError("Date/heure d'entrée invalide.");
+      return;
+    }
+    if (entreeLocal >= startOfToday) {
+      setPointageError("Tu peux ajouter des heures uniquement jusqu'à hier (pas aujourd'hui ni dans le futur).");
+      return;
+    }
+
+    if (pointageForm.heure_sortie) {
+      const sortieLocal = new Date(pointageForm.heure_sortie);
+      if (Number.isNaN(sortieLocal.getTime())) {
+        setPointageError("Date/heure de sortie invalide.");
+        return;
+      }
+      if (sortieLocal >= startOfToday) {
+        setPointageError("La sortie doit être au plus tard hier (pas aujourd'hui ni dans le futur).");
+        return;
+      }
+      if (sortieLocal < entreeLocal) {
+        setPointageError("L'heure de sortie ne peut pas être avant l'heure d'entrée.");
+        return;
+      }
+    }
+
 
     setPointageSaving(true);
     try {
@@ -414,9 +454,8 @@ export default function DashboardPage() {
 
       setPointageSuccess("Pointage ajouté ");
       setPointageForm({ heure_entree: "", heure_sortie: "" });
+      await loadSalary();
 
-      // optionnel: ouvrir direct la modal des présences
-      // handlePresence(selectedUser.pk_utilisateur);
     } catch (e: any) {
       setPointageError(e?.message || "Erreur inconnue");
     } finally {
@@ -437,6 +476,11 @@ export default function DashboardPage() {
   const loadUsers = async () => {
     const data = await fetchUsers();
     setUsers(data);
+  };
+
+  const loadSalary = async () => {
+    const data = await fetch("/api/admin/salaire", { cache: "no-store" }).then((r) => r.json());
+    setSalaryMap(data || {});
   };
 
   const handleDoorSubmit = async () => {
@@ -839,6 +883,10 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-semibold text-white">{user.prenom} {user.nom}</p>
                         <p className="text-xs text-slate-400">Badge: {user.id_badge || "—"}</p>
+                        <p className="text-xs text-slate-400">
+                          Salaire (mois): {salaryMap[user.pk_utilisateur]?.salaire_mois?.toFixed(2) ?? "0.00"} CHF
+                        </p>
+
                       </div>
                       <div className="truncate text-slate-300">{user.email}</div>
                       <div>
@@ -1254,7 +1302,10 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
                 <span className="text-slate-400">Badge</span>
                 <span className="font-semibold text-white">{selectedUser.id_badge || "—"}</span>
+
+
               </div>
+
               <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800/50 px-4 py-3">
                 <span className="text-slate-400">Rôle</span>
                 <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-100">
